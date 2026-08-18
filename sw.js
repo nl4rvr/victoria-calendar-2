@@ -1,10 +1,5 @@
 const CACHE_NAME = 'cycle-pwa-v1';
-const ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json'
-];
-
+const ASSETS = ['/', '/index.html', '/manifest.json'];
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -12,7 +7,6 @@ self.addEventListener('install', event => {
             .then(() => self.skipWaiting())
     );
 });
-
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys => {
@@ -24,7 +18,6 @@ self.addEventListener('activate', event => {
     );
     return self.clients.claim();
 });
-
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
