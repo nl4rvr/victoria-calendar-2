@@ -32,6 +32,11 @@
             --placeholder-color: rgba(45, 27, 61, 0.4);
             --toast-bg: rgba(0,0,0,0.8);
             --toast-color: #fff;
+            /* Цвета фаз */
+            --menstrual-color: #e74c3c;
+            --follicular-color: #3498db;
+            --ovulation-color: #f1c40f;
+            --luteal-color: #e67e22;
         }
 
         [data-theme="black"] {
@@ -50,6 +55,10 @@
             --placeholder-color: rgba(200, 180, 210, 0.5);
             --toast-bg: rgba(255,255,255,0.2);
             --toast-color: #e8dff0;
+            --menstrual-color: #e74c3c;
+            --follicular-color: #3498db;
+            --ovulation-color: #f1c40f;
+            --luteal-color: #e67e22;
         }
 
         [data-theme="purple"] {
@@ -68,6 +77,10 @@
             --placeholder-color: rgba(45, 27, 61, 0.4);
             --toast-bg: rgba(0,0,0,0.7);
             --toast-color: #fff;
+            --menstrual-color: #e74c3c;
+            --follicular-color: #3498db;
+            --ovulation-color: #f1c40f;
+            --luteal-color: #e67e22;
         }
 
         * { margin:0; padding:0; box-sizing:border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -151,7 +164,7 @@
         }
         .header-actions button:active { transform: scale(0.92); }
 
-        /* ===== ФАЗА ===== */
+        /* ===== ФАЗА + БЭДЖ ===== */
         .phase-badge {
             background: var(--card-bg);
             border-radius: 30px;
@@ -301,9 +314,13 @@
             cursor: pointer;
             position: relative;
             color: var(--text-color);
+            border: 2px solid transparent;
         }
         .calendar-grid .day.today {
-            background: var(--primary);
+            border-color: var(--primary);
+        }
+        .calendar-grid .day.period {
+            background: #e74c3c;
             color: white;
         }
         .calendar-grid .day.period::after {
@@ -329,6 +346,20 @@
             border: 2px solid var(--primary);
         }
 
+        /* Цвета фаз (фон для дней, не помеченных как период) */
+        .calendar-grid .day.phase-menstrual {
+            background: rgba(231, 76, 60, 0.3);
+        }
+        .calendar-grid .day.phase-follicular {
+            background: rgba(52, 152, 219, 0.25);
+        }
+        .calendar-grid .day.phase-ovulation {
+            background: rgba(241, 196, 15, 0.3);
+        }
+        .calendar-grid .day.phase-luteal {
+            background: rgba(230, 126, 34, 0.25);
+        }
+
         .calendar-nav {
             display: flex;
             justify-content: space-between;
@@ -339,6 +370,26 @@
             font-weight: 600;
             font-size: 17px;
             color: var(--text-color);
+        }
+
+        /* Легенда фаз */
+        .phase-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .phase-legend .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .phase-legend .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
         }
 
         /* ===== ЧИПСЫ ===== */
@@ -509,7 +560,10 @@
             transition: opacity 0.3s ease, transform 0.3s ease;
             transform: translateX(-50%) translateY(20px);
             pointer-events: none;
-            white-space: nowrap;
+            max-width: 90%;
+            white-space: normal;
+            text-align: center;
+            line-height: 1.4;
         }
         #toast-container.show {
             opacity: 1;
@@ -614,6 +668,13 @@
                         <button class="btn btn-sm btn-outline" id="next-month">▶</button>
                     </div>
                     <div class="calendar-grid" id="calendar-grid"></div>
+                    <!-- Легенда фаз -->
+                    <div class="phase-legend" id="phase-legend">
+                        <div class="legend-item"><span class="legend-color" style="background:#e74c3c;"></span> Менструальная</div>
+                        <div class="legend-item"><span class="legend-color" style="background:#3498db;"></span> Фолликулярная</div>
+                        <div class="legend-item"><span class="legend-color" style="background:#f1c40f;"></span> Овуляторная</div>
+                        <div class="legend-item"><span class="legend-color" style="background:#e67e22;"></span> Лютеиновая</div>
+                    </div>
                 </div>
 
                 <div class="card">
@@ -708,6 +769,7 @@
                         <p>Средняя длительность менструации: <span id="avg-period-duration">—</span> дней</p>
                         <p>Последние месячные: <span id="last-period">—</span></p>
                         <p>Количество ПА: <span id="intercourse-count">0</span></p>
+                        <p>Ожидаемое начало следующей менструации: <span id="next-period">—</span></p>
                     </div>
                     <div class="chart-container"><canvas id="cycleChart" width="300" height="150"></canvas></div>
                 </div>
@@ -802,7 +864,7 @@
     }
 
     // ===== Toast =====
-    function showToast(message, duration = 3000) {
+    function showToast(message, duration = 4000) {
         const toast = document.getElementById('toast-container');
         toast.textContent = message;
         toast.classList.add('show');
@@ -869,13 +931,13 @@
             if (snap.exists()) {
                 userData = snap.data();
             } else {
-                // Если документа нет, создаём с пустыми данными
                 userData = { cycles: [], migraines: [] };
                 await setDoc(ref, userData);
             }
             if (!userData.cycles) userData.cycles = [];
             if (!userData.migraines) userData.migraines = [];
             renderAll();
+            checkDelay();
         } catch (err) {
             console.error('Ошибка загрузки данных:', err);
             let msg = err.message;
@@ -883,8 +945,7 @@
                 msg = '❌ Нет прав доступа к данным. Проверьте правила Firestore.';
             }
             showToast(msg, 5000);
-            // Не выходим из приложения, данные остаются пустыми
-            renderAll(); // отобразим пустой календарь
+            renderAll();
         }
     }
 
@@ -897,6 +958,7 @@
             const ref = getUserDocRef(email);
             await setDoc(ref, userData, { merge: true });
             showToast('✅ Данные сохранены!');
+            checkDelay(); // Проверим задержку после сохранения
         } catch (err) {
             console.error('Ошибка сохранения:', err);
             let msg = err.message;
@@ -916,15 +978,15 @@
                 if (!userData.cycles) userData.cycles = [];
                 if (!userData.migraines) userData.migraines = [];
                 renderAll();
+                checkDelay();
             }
         }, (err) => {
             console.error('Ошибка подписки:', err);
             let msg = err.message;
             if (msg.includes('permission')) {
-                msg = '⚠️ Нет прав на чтение в реальном времени. Проверьте правила.';
+                msg = '⚠️ Нет прав на чтение в реальном времени.';
             }
             showToast(msg, 5000);
-            // Не отписываемся, пробуем дальше
         });
     }
 
@@ -963,7 +1025,6 @@
                 return;
             }
 
-            // Показываем интерфейс
             pageLogin.style.display = 'none';
             pageLogin.classList.remove('active');
             pageMain.style.display = 'block';
@@ -1046,6 +1107,51 @@
         return { phase, day: diffDays };
     }
 
+    // ===== Проверка задержки =====
+    function checkDelay() {
+        const cycles = userData.cycles;
+        const periodEntries = cycles.filter(e => e.type === 'period').sort((a,b) => a.date.localeCompare(b.date));
+        if (periodEntries.length < 1) return;
+
+        const avgCycle = calculateAverageCycle(periodEntries);
+        if (avgCycle === '—') return;
+
+        const lastPeriod = periodEntries[periodEntries.length - 1];
+        const lastDate = parseDate(lastPeriod.date);
+        const today = new Date();
+        const diffDays = Math.floor((today - lastDate) / (1000*60*60*24));
+        const expectedDay = avgCycle; // ожидаемый день начала следующей менструации
+
+        // Если сегодня >= ожидаемый день + 1 и нет записи о месячных за сегодня
+        if (diffDays >= expectedDay && !cycles.some(e => e.date === todayStr() && e.type === 'period')) {
+            const delay = diffDays - expectedDay + 1;
+            let message = '';
+            if (delay === 1) {
+                message = '🌸 Пришло время для месячных, но их ещё нет. Возможно, задержка 1 день. Рекомендуем сделать тест на беременность, если есть вероятность. Кисунчик советует не паниковать.';
+            } else if (delay <= 3) {
+                message = `⏳ Задержка ${delay} дня. Стресс, смена климата или физические нагрузки могут влиять. Кисунчик рекомендует вести дневник и не волноваться.`;
+            } else if (delay <= 7) {
+                message = `⚠️ Задержка ${delay} дней. Если вы не планируете беременность, советуем обратиться к врачу. Кисунчик переживает за тебя.`;
+            } else {
+                message = `🔴 Задержка ${delay} дней. Обязательно посети гинеколога. Кисунчик поддерживает тебя.`;
+            }
+            showToast(`📢 Задержка! ${message}`, 8000);
+        } else if (diffDays === expectedDay && !cycles.some(e => e.date === todayStr() && e.type === 'period')) {
+            showToast('🌸 Сегодня ожидаемое начало менструации. Если не начались, возможно, завтра. Кисунчик рядом.', 5000);
+        }
+    }
+
+    function calculateAverageCycle(periodEntries) {
+        if (periodEntries.length < 2) return '—';
+        let total = 0;
+        for (let i=1; i<periodEntries.length; i++) {
+            const prev = parseDate(periodEntries[i-1].date);
+            const curr = parseDate(periodEntries[i].date);
+            total += Math.round((curr - prev) / (1000*60*60*24));
+        }
+        return Math.round(total / (periodEntries.length - 1));
+    }
+
     // ===== БАЗА СОВЕТОВ =====
     const TIPS_DB = {
         menstrual: {
@@ -1123,6 +1229,7 @@
         window._currentPhase = info.phase;
     }
 
+    // --- Календарь с фазами ---
     function renderCalendar() {
         const grid = document.getElementById('calendar-grid');
         const monthYear = document.getElementById('month-year');
@@ -1131,6 +1238,14 @@
         const firstDay = new Date(currentYear, currentMonth, 1).getDay();
         const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
         const today = new Date();
+
+        // Получаем информацию о фазах для каждого дня месяца
+        // Ищем последнюю менструацию
+        const periodEntries = userData.cycles.filter(e => e.type === 'period').sort((a,b) => a.date.localeCompare(b.date));
+        let lastPeriodDate = null;
+        if (periodEntries.length > 0) {
+            lastPeriodDate = parseDate(periodEntries[periodEntries.length-1].date);
+        }
 
         let html = '';
         const weekDays = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
@@ -1147,6 +1262,20 @@
             let classes = 'day';
             if (isToday) classes += ' today';
 
+            // Определяем фазу для данного дня
+            let phase = 'unknown';
+            if (lastPeriodDate) {
+                const diffDays = Math.floor((dateObj - lastPeriodDate) / (1000*60*60*24)) + 1;
+                if (diffDays <= 5) phase = 'menstrual';
+                else if (diffDays <= 13) phase = 'follicular';
+                else if (diffDays <= 15) phase = 'ovulation';
+                else if (diffDays <= 28) phase = 'luteal';
+            }
+            if (phase !== 'unknown') {
+                classes += ` phase-${phase}`;
+            }
+
+            // События
             const events = userData.cycles.filter(e => e.date === dateStr);
             let hasPeriod = false, hasIntercourse = false, hasOther = false, hasMigraine = false;
             events.forEach(e => {
@@ -1170,6 +1299,7 @@
         grid.innerHTML = html;
     }
 
+    // --- Сегодня ---
     function renderToday() {
         const todayDate = document.getElementById('today-date');
         const todayEventsDiv = document.getElementById('today-events');
@@ -1198,6 +1328,7 @@
         document.getElementById('spotting-container').style.display = 'none';
     }
 
+    // --- Календарь мигрени ---
     function renderMigraineCalendar() {
         const grid = document.getElementById('migraine-calendar-grid');
         const monthYear = document.getElementById('migraine-month-year');
@@ -1243,7 +1374,7 @@
     function renderStats() {
         const cycles = userData.cycles;
         const periodEntries = cycles.filter(e => e.type === 'period').sort((a,b) => a.date.localeCompare(b.date));
-        let avgCycle = '—', avgDuration = '—', lastPeriod = '—';
+        let avgCycle = '—', avgDuration = '—', lastPeriod = '—', nextPeriod = '—';
         if (periodEntries.length >= 2) {
             let total = 0;
             for (let i=1; i<periodEntries.length; i++) {
@@ -1263,11 +1394,18 @@
             } else {
                 avgDuration = '?';
             }
+            // Рассчитываем ожидаемую дату следующей менструации
+            if (avgCycle !== '—') {
+                const nextDate = new Date(lastStart);
+                nextDate.setDate(nextDate.getDate() + avgCycle);
+                nextPeriod = formatDate(nextDate);
+            }
         }
         document.getElementById('avg-cycle').textContent = avgCycle;
         document.getElementById('avg-period-duration').textContent = avgDuration;
         document.getElementById('last-period').textContent = lastPeriod;
         document.getElementById('intercourse-count').textContent = cycles.filter(e => e.type === 'intercourse').length;
+        document.getElementById('next-period').textContent = nextPeriod;
 
         const migraines = userData.migraines.filter(m => m.had === true);
         document.getElementById('migraine-count').textContent = migraines.length;
@@ -1704,7 +1842,7 @@
     document.documentElement.setAttribute('data-theme', savedTheme);
     currentTheme = savedTheme;
 
-    console.log('🌸 с любовью от кисунчика!');
+    console.log('🌸 Приложение обновлено с любовью от кисунчика!');
 </script>
 </body>
 </html>
