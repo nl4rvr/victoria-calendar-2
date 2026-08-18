@@ -15,7 +15,7 @@
         }
     </script>
     <style>
-        /* ===== ТЕМЫ ===== */
+        /* ===== ТЕМЫ (без изменений) ===== */
         :root {
             --bg-start: #f7f0fc;
             --bg-end: #e6d9f0;
@@ -489,7 +489,7 @@
             cursor: pointer;
         }
 
-        /* ===== TOAST (уведомления) ===== */
+        /* ===== TOAST ===== */
         #toast-container {
             position: fixed;
             bottom: 30px;
@@ -543,7 +543,7 @@
 <!-- TOAST -->
 <div id="toast-container"></div>
 
-<!-- МОДАЛЬНОЕ ОКНО (универсальное) -->
+<!-- МОДАЛЬНОЕ ОКНО -->
 <div class="modal-overlay" id="modal-overlay">
     <div class="modal-box">
         <h3 id="modal-title">📅 События</h3>
@@ -766,9 +766,9 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ===== Хардкод пользователей =====
-    const ADMIN_EMAIL = 'kostya@mail.com';
-    const GIRL_EMAIL = 'vika@mail.com';
+    // ===== НОВЫЕ EMAIL ПОЛЬЗОВАТЕЛЕЙ =====
+    const ADMIN_EMAIL = 'kostya@kostya.com';
+    const GIRL_EMAIL = 'vika@vika.com';
 
     // ===== DOM-элементы =====
     const pageLogin = document.getElementById('page-login');
@@ -812,7 +812,7 @@
         }, duration);
     }
 
-    // ===== Модальное окно (универсальное) =====
+    // ===== Модальное окно =====
     const modalOverlay = document.getElementById('modal-overlay');
     const modalTitle = document.getElementById('modal-title');
     const modalContent = document.getElementById('modal-content');
@@ -836,36 +836,55 @@
     // ===== Состояние =====
     let currentUser = null;
     let isAdmin = false;
-    let viewingProfile = 'me';
+    let viewingProfile = 'me'; // 'me' или 'her'
     let userData = { cycles: [], migraines: [] };
     let currentMonth = new Date().getMonth();
     let currentYear = new Date().getFullYear();
     let migraineMonth = currentMonth;
     let migraineYear = currentYear;
     let unsubscribe = null;
-    let currentDocId = '';
 
-    // ===== Работа с Firestore (по email) =====
-    function getUserDocRef(email) { return doc(db, 'users', email); }
+    // ===== Функция для получения email текущего профиля =====
+    function getCurrentProfileEmail() {
+        if (!currentUser) return null;
+        if (isAdmin && viewingProfile === 'her') {
+            return GIRL_EMAIL;
+        }
+        return currentUser.email;
+    }
+
+    // ===== Работа с Firestore =====
+    function getUserDocRef(email) {
+        return doc(db, 'users', email);
+    }
 
     async function loadUserData(email) {
-        const ref = getUserDocRef(email);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-            userData = snap.data();
-        } else {
-            userData = { cycles: [], migraines: [] };
-            await setDoc(ref, userData);
+        if (!email) {
+            console.error('loadUserData: email is empty');
+            return;
         }
-        if (!userData.cycles) userData.cycles = [];
-        if (!userData.migraines) userData.migraines = [];
-        currentDocId = email;
-        renderAll();
+        const ref = getUserDocRef(email);
+        try {
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                userData = snap.data();
+            } else {
+                userData = { cycles: [], migraines: [] };
+                await setDoc(ref, userData);
+            }
+            if (!userData.cycles) userData.cycles = [];
+            if (!userData.migraines) userData.migraines = [];
+            renderAll();
+        } catch (err) {
+            console.error('Ошибка загрузки данных:', err);
+            showToast('❌ Ошибка загрузки: ' + err.message);
+        }
     }
 
     async function saveUserData(email) {
         if (!email) {
             console.error('saveUserData: email is empty');
+            showToast('❌ Ошибка: email не указан');
             return;
         }
         try {
@@ -879,6 +898,7 @@
     }
 
     function subscribeUserData(email) {
+        if (!email) return null;
         const ref = getUserDocRef(email);
         return onSnapshot(ref, (snap) => {
             if (snap.exists()) {
@@ -887,6 +907,9 @@
                 if (!userData.migraines) userData.migraines = [];
                 renderAll();
             }
+        }, (err) => {
+            console.error('Ошибка подписки:', err);
+            showToast('❌ Ошибка обновления данных');
         });
     }
 
@@ -900,10 +923,13 @@
             await signInWithEmailAndPassword(auth, email, password);
         } catch (err) {
             loginError.textContent = 'Ошибка: ' + err.message;
+            showToast('❌ ' + err.message);
         }
     });
 
-    logoutBtn.addEventListener('click', async () => { await signOut(auth); });
+    logoutBtn.addEventListener('click', async () => {
+        await signOut(auth);
+    });
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -913,6 +939,7 @@
             const isGirl = (email === GIRL_EMAIL);
             if (!isAdmin && !isGirl) {
                 loginError.textContent = 'Доступ запрещён.';
+                showToast('❌ Доступ запрещён');
                 signOut(auth);
                 return;
             }
@@ -930,10 +957,12 @@
                 viewingProfile = 'me';
             }
 
-            const targetEmail = (isAdmin && viewingProfile === 'her') ? GIRL_EMAIL : email;
-            loadUserData(targetEmail);
-            if (unsubscribe) unsubscribe();
-            unsubscribe = subscribeUserData(targetEmail);
+            const targetEmail = getCurrentProfileEmail();
+            if (targetEmail) {
+                loadUserData(targetEmail);
+                if (unsubscribe) unsubscribe();
+                unsubscribe = subscribeUserData(targetEmail);
+            }
             setupReminder();
         } else {
             if (unsubscribe) unsubscribe();
@@ -952,10 +981,12 @@
             btn.classList.add('active');
             viewingProfile = btn.dataset.profile;
             if (isAdmin && currentUser) {
-                const targetEmail = (viewingProfile === 'her') ? GIRL_EMAIL : ADMIN_EMAIL;
-                if (unsubscribe) unsubscribe();
-                unsubscribe = subscribeUserData(targetEmail);
-                loadUserData(targetEmail);
+                const targetEmail = getCurrentProfileEmail();
+                if (targetEmail) {
+                    if (unsubscribe) unsubscribe();
+                    unsubscribe = subscribeUserData(targetEmail);
+                    loadUserData(targetEmail);
+                }
             }
         });
     });
@@ -994,7 +1025,7 @@
         return { phase, day: diffDays };
     }
 
-    // ===== БАЗА СОВЕТОВ ===== (сокращённо, но много вариантов)
+    // ===== БАЗА СОВЕТОВ (сокращённо, но много вариантов) =====
     const TIPS_DB = {
         menstrual: {
             plans: ['Отдыхай, пей тёплую воду.', 'Лёгкая йога поможет.', 'Послушай тело, поспи.', 'Дыхательная гимнастика.', 'Тёплая ванна с солью.'],
@@ -1402,9 +1433,20 @@
 
     // ===== ОБРАБОТЧИКИ КНОПОК =====
 
-    // --- Месячные (сохраняем сразу) ---
+    // Вспомогательная функция для сохранения
+    async function saveCurrentData() {
+        const email = getCurrentProfileEmail();
+        if (!email) {
+            showToast('❌ Не удалось определить профиль');
+            return false;
+        }
+        await saveUserData(email);
+        return true;
+    }
+
+    // --- Месячные ---
     document.getElementById('btn-period').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) {
+        if (!currentUser) {
             showToast('❌ Пользователь не авторизован');
             return;
         }
@@ -1412,7 +1454,7 @@
         const exists = userData.cycles.some(e => e.date === dateStr && e.type === 'period');
         if (!exists) {
             userData.cycles.push({ date: dateStr, type: 'period' });
-            await saveUserData(currentDocId);
+            await saveCurrentData();
             renderAll();
         } else {
             showToast('ℹ️ Месячные уже записаны на сегодня');
@@ -1421,7 +1463,7 @@
 
     // --- Завершить месячные ---
     document.getElementById('btn-end-period').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         const dateStr = todayStr();
         const hasPeriod = userData.cycles.some(e => e.date === dateStr && e.type === 'period');
         const hasEnd = userData.cycles.some(e => e.date === dateStr && e.type === 'period_end');
@@ -1434,19 +1476,19 @@
             return;
         }
         userData.cycles.push({ date: dateStr, type: 'period_end' });
-        await saveUserData(currentDocId);
+        await saveCurrentData();
         renderAll();
     });
 
     // --- ПА ---
     document.getElementById('btn-intercourse').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         userData.cycles.push({ date: todayStr(), type: 'intercourse' });
-        await saveUserData(currentDocId);
+        await saveCurrentData();
         renderAll();
     });
 
-    // --- Симптомы (открыть контейнер) ---
+    // --- Симптомы ---
     document.getElementById('btn-symptom').addEventListener('click', () => {
         const container = document.getElementById('symptom-container');
         container.style.display = container.style.display === 'none' ? 'block' : 'none';
@@ -1458,7 +1500,7 @@
     });
 
     document.getElementById('save-symptom').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         const selected = document.querySelectorAll('#symptom-chips .chip.selected');
         if (selected.length === 0) {
             showToast('⚠️ Выберите хотя бы один симптом');
@@ -1469,7 +1511,7 @@
         for (let sym of symptoms) {
             userData.cycles.push({ date: dateStr, type: 'symptom', details: sym });
         }
-        await saveUserData(currentDocId);
+        await saveCurrentData();
         renderAll();
         document.getElementById('symptom-container').style.display = 'none';
     });
@@ -1486,7 +1528,7 @@
     });
 
     document.getElementById('save-spotting').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         const selected = document.querySelector('#spotting-chips .chip.selected');
         if (!selected) {
             showToast('⚠️ Выберите тип выделений');
@@ -1494,26 +1536,26 @@
         }
         const details = selected.dataset.spotting;
         userData.cycles.push({ date: todayStr(), type: 'spotting', details: details });
-        await saveUserData(currentDocId);
+        await saveCurrentData();
         renderAll();
         document.getElementById('spotting-container').style.display = 'none';
     });
 
     // --- Быстрые заметки ---
     document.getElementById('quick-mood').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         const val = prompt('😊 Какое настроение? (например, "отличное", "грустное")');
-        if (val) { userData.cycles.push({ date: todayStr(), type: 'mood', details: val }); await saveUserData(currentDocId); renderAll(); }
+        if (val) { userData.cycles.push({ date: todayStr(), type: 'mood', details: val }); await saveCurrentData(); renderAll(); }
     });
     document.getElementById('quick-pain').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         const val = prompt('💢 Опишите боль (локализация, интенсивность)');
-        if (val) { userData.cycles.push({ date: todayStr(), type: 'pain', details: val }); await saveUserData(currentDocId); renderAll(); }
+        if (val) { userData.cycles.push({ date: todayStr(), type: 'pain', details: val }); await saveCurrentData(); renderAll(); }
     });
     document.getElementById('quick-note').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         const val = prompt('📝 Ваша заметка');
-        if (val) { userData.cycles.push({ date: todayStr(), type: 'note', details: val }); await saveUserData(currentDocId); renderAll(); }
+        if (val) { userData.cycles.push({ date: todayStr(), type: 'note', details: val }); await saveCurrentData(); renderAll(); }
     });
 
     // --- Навигация календаря ---
@@ -1569,7 +1611,7 @@
         }
         showModal(`📅 ${dateStr}`, html);
 
-        // Обработчики удаления (если есть записи)
+        // Обработчики удаления
         modalContent.querySelectorAll('.del-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const idx = parseInt(btn.dataset.index);
@@ -1579,9 +1621,8 @@
                 } else if (type === 'migraine') {
                     userData.migraines.splice(idx, 1);
                 }
-                await saveUserData(currentDocId);
+                await saveCurrentData();
                 renderAll();
-                // обновить модалку
                 showDayEvents(dateStr);
             });
         });
@@ -1594,11 +1635,11 @@
     });
 
     document.getElementById('migraine-no').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         const dateStr = todayStr();
         userData.migraines = userData.migraines.filter(m => m.date !== dateStr);
         userData.migraines.push({ date: dateStr, had: false, med: null });
-        await saveUserData(currentDocId);
+        await saveCurrentData();
         renderAll();
         document.getElementById('migraine-meds').style.display = 'none';
     });
@@ -1608,13 +1649,13 @@
     });
 
     document.getElementById('save-migraine').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser) return;
         const dateStr = todayStr();
         const selected = document.querySelector('#med-chips .chip.selected');
         const med = selected ? selected.dataset.med : null;
         userData.migraines = userData.migraines.filter(m => m.date !== dateStr);
         userData.migraines.push({ date: dateStr, had: true, med: med });
-        await saveUserData(currentDocId);
+        await saveCurrentData();
         renderAll();
         document.getElementById('migraine-meds').style.display = 'none';
     });
@@ -1663,7 +1704,7 @@
     document.documentElement.setAttribute('data-theme', savedTheme);
     currentTheme = savedTheme;
 
-    console.log('🌸 Приложение обновлено с любовью от кисунчика!');
+    console.log('🌸 с любовью от кисунчика!');
 </script>
 </body>
 </html>
