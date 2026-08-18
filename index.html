@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🌸 Мой цикл</title>
+    <link rel="manifest" href="manifest.json">
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js",
+                "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js"
+            }
+        }
+    </script>
+    <style>
+        /* ===== Глобальные переменные темы ===== */
+        :root {
+            --bg-start: #f7f0fc;
+            --bg-end: #e6d9f0;
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --glass-shadow: 0 30px 50px rgba(0, 0, 0, 0.15);
+            --text-color: #2d1b3d;
+            --text-secondary: #4a3a5a;
+            --primary: #b56a9e;
+            --primary-dark: #9d5488;
+            --chip-bg: rgba(255, 255, 255, 0.5);
+            --card-bg: rgba(255, 255, 255, 0.4);
+            --input-bg: rgba(255, 255, 255, 0.4);
+            --placeholder-color: rgba(45, 27, 61, 0.4);
+        }
+
+        [data-theme="black"] {
+            --bg-start: #0f0a14;
+            --bg-end: #1a1025;
+            --glass-bg: rgba(20, 15, 30, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 30px 50px rgba(0, 0, 0, 0.6);
+            --text-color: #e8dff0;
+            --text-secondary: #b8a8c8;
+            --primary: #c77db0;
+            --primary-dark: #a8628f;
+            --chip-bg: rgba(60, 40, 70, 0.6);
+            --card-bg: rgba(30, 20, 40, 0.5);
+            --input-bg: rgba(60, 40, 70, 0.5);
+            --placeholder-color: rgba(200, 180, 210, 0.5);
+        }
+
+        [data-theme="purple"] {
+            --bg-start: #e8d5f5;
+            --bg-end: #d4b8e8;
+            --glass-bg: rgba(200, 170, 220, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --glass-shadow: 0 30px 50px rgba(80, 40, 100, 0.2);
+            --text-color: #2d1b3d;
+            --text-secondary: #4a3a5a;
+            --primary: #9b6fa6;
+            --primary-dark: #7d5488;
+            --chip-bg: rgba(200, 170, 220, 0.5);
+            --card-bg: rgba(200, 170, 220, 0.3);
+            --input-bg: rgba(200, 170, 220, 0.4);
+            --placeholder-color: rgba(45, 27, 61, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            transition: background 0.3s ease;
+        }
+
+        .glass-container {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 48px;
+            padding: 24px 20px 20px;
+            box-shadow: var(--glass-shadow), inset 0 0 0 1px var(--glass-border);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .glass-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+            pointer-events: none;
+            animation: shimmer 8s infinite alternate;
+        }
+        @keyframes shimmer {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(10%, 10%) rotate(5deg); }
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+            color: var(--text-color);
+            transition: color 0.3s;
+        }
+
+        /* ===== Шапка ===== */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .app-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-actions button {
+            background: var(--chip-bg);
+            border: none;
+            border-radius: 30px;
+            padding: 6px 12px;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid var(--glass-border);
+        }
+        .header-actions button:active {
+            transform: scale(0.92);
+        }
+        .profile-switch {
+            display: flex;
+            gap: 4px;
+            background: var(--glass-bg);
+            border-radius: 30px;
+            padding: 4px;
+        }
+        .profile-switch button {
+            background: transparent;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .profile-switch button.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* ===== Вкладки ===== */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: var(--glass-bg);
+            border-radius: 40px;
+            padding: 6px;
+            backdrop-filter: blur(4px);
+        }
+        .tab-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px 0;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: var(--card-bg);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            color: var(--text-color);
+        }
+        .tab-btn:active {
+            transform: scale(0.96);
+        }
+
+        .page {
+            display: none;
+            animation: fadeSlide 0.4s ease;
+        }
+        .page.active {
+            display: block;
+        }
+        @keyframes fadeSlide {
+            0% { opacity: 0; transform: translateY(12px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Карточки ===== */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
+            border-radius: 28px;
+            padding: 18px 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
+            transition: background 0.3s;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-color);
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .btn {
+            background: var(--chip-bg);
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 30px;
+            padding: 12px 16px;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-color);
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: 1px solid transparent;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 6px 16px rgba(181, 106, 158, 0.3);
+            border-color: var(--primary);
+        }
+        .btn-primary:active {
+            background: var(--primary-dark);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid var(--glass-border);
+        }
+        .btn-sm {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+        .btn-danger {
+            background: #c0392b;
+            color: white;
+        }
+
+        /* ===== Календарь ===== */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .calendar-grid .day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 14px;
+            background: var(--chip-bg);
+            transition: 0.2s;
+            cursor: pointer;
+            position: relative;
+            color: var(--text-color);
+        }
+        .calendar-grid .day.today {
+            background: var(--primary);
+            color: white;
+        }
+        .calendar-grid .day.has-event::after {
+            content: '●';
+            position: absolute;
+            bottom: 2px;
+            font-size: 8px;
+            color: var(--primary);
+        }
+        .calendar-grid .day.migraine::after {
+            content: '⚠️';
+            font-size: 10px;
+            bottom: -2px;
+        }
+        .calendar-grid .day.period::after {
+            content: '🩸';
+            font-size: 10px;
+            bottom: -2px;
+        }
+        .calendar-grid .day.intercourse::after {
+            content: '💞';
+            font-size: 10px;
+            bottom: -2px;
+        }
+        .calendar-grid .day.other {
+            background: rgba(255, 215, 0, 0.15);
+        }
+
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .calendar-nav .month-year {
+            font-weight: 600;
+            font-size: 17px;
+            color: var(--text-color);
+        }
+
+        /* ===== Чипсы ===== */
+        .chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .chip {
+            background: var(--chip-bg);
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 14px;
+            border: 1px solid transparent;
+            transition: 0.2s;
+            cursor: pointer;
+            backdrop-filter: blur(2px);
+            color: var(--text-color);
+        }
+        .chip.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .chip:active {
+            transform: scale(0.92);
+        }
+
+        /* ===== Советы ===== */
+        .tips-container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 16px;
+            margin-top: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        .tips-container .tip-item {
+            margin-bottom: 10px;
+        }
+        .tips-container .tip-item:last-child {
+            margin-bottom: 0;
+        }
+        .tips-container .tip-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--primary);
+        }
+        .tips-container .tip-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* ===== Вход ===== */
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .login-form input {
+            background: var(--input-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 14px 18px;
+            font-size: 16px;
+            outline: none;
+            backdrop-filter: blur(4px);
+            color: var(--text-color);
+        }
+        .login-form input::placeholder {
+            color: var(--placeholder-color);
+        }
+        .login-form .error {
+            color: #c0392b;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* ===== Подпись ===== */
+        .footer-signature {
+            text-align: center;
+            margin-top: 28px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            letter-spacing: 0.3px;
+            opacity: 0.7;
+        }
+        .footer-signature span {
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        /* ===== Модальное удаление ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-box {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 40px;
+            padding: 24px;
+            max-width: 90%;
+            width: 360px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            color: var(--text-color);
+        }
+        .modal-box h3 {
+            margin-bottom: 12px;
+        }
+        .modal-box .event-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .modal-box .event-item:last-child {
+            border-bottom: none;
+        }
+        .modal-box .event-item .del-btn {
+            background: #c0392b;
+            border: none;
+            color: white;
+            border-radius: 20px;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .modal-close {
+            margin-top: 16px;
+            text-align: center;
+        }
+        .modal-close button {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* ===== Адаптив ===== */
+        @media (max-width: 400px) {
+            .glass-container { padding: 16px; }
+            .tab-btn { font-size: 13px; }
+            .app-header h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ===== -->
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal-box">
+        <h3 id="modal-title">📅 События</h3>
+        <div id="modal-events-list"></div>
+        <div class="modal-close">
+            <button id="modal-close-btn">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<div id="app" class="glass-container">
+    <div class="content">
+
+        <!-- ===== СТРАНИЦА ВХОДА ===== -->
+        <div id="page-login" class="page active">
+            <div class="app-header">
+                <h1>🌸 Цикл</h1>
+                <span class="user-emoji">👩</span>
+            </div>
+            <div class="card" style="margin-top: 10px;">
+                <div class="card-title">🔐 Вход</div>
+                <form id="login-form" class="login-form">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Пароль" required>
+                    <button type="submit" class="btn btn-primary">Войти</button>
+                    <div id="login-error" class="error"></div>
+                </form>
+            </div>
+            <div class="footer-signature">
+                <span>с любовью от кисунчика</span> 💕
+            </div>
+        </div>
+
+        <!-- ===== ОСНОВНОЕ ПРИЛОЖЕНИЕ ===== -->
+        <div id="page-main" class="page">
+
+            <!-- Шапка -->
+            <div class="app-header">
+                <h1>🌸 Цикл</h1>
+                <div class="header-actions">
+                    <button id="theme-toggle" title="Сменить тему">🎨</button>
+                    <button id="logout-btn" title="Выйти">🚪</button>
+                </div>
+            </div>
+
+            <!-- Переключение профилей (только для админа) -->
+            <div id="profile-switch-container" style="display:none; margin-bottom:12px;">
+                <div class="profile-switch">
+                    <button class="active" data-profile="me">👤 Я</button>
+                    <button data-profile="her">👩 Девушка</button>
+                </div>
+            </div>
+
+            <!-- Вкладки -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-cycle">📅 Цикл</button>
+                <button class="tab-btn" data-tab="tab-migraine">🧠 Мигрень</button>
+                <button class="tab-btn" data-tab="tab-stats">📊 Статистика</button>
+                <button class="tab-btn" data-tab="tab-tips">💡 Советы</button>
+            </div>
+
+            <!-- ===== Вкладка "Цикл" ===== -->
+            <div id="tab-cycle" class="page active">
+                <!-- Календарь -->
+                <div class="card">
+                    <div class="calendar-nav">
+                        <button class="btn btn-sm btn-outline" id="prev-month">◀</button>
+                        <span class="month-year" id="month-year">Март 2026</span>
+                        <button class="btn btn-sm btn-outline" id="next-month">▶</button>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid"></div>
+                </div>
+
+                <!-- Запись сегодня -->
+                <div class="card">
+                    <div class="card-title">📝 Сегодня, <span id="today-date"></span></div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                        <button class="btn btn-sm btn-outline" id="btn-period">🩸 Месячные</button>
+                        <button class="btn btn-sm btn-outline" id="btn-intercourse">💞 ПА</button>
+                        <button class="btn btn-sm btn-outline" id="btn-symptom">😣 Симптом</button>
+                    </div>
+                    <div id="symptom-container" style="display:none;">
+                        <div class="chip-group" id="symptom-chips">
+                            <span class="chip" data-symptom="болит живот">😖 живот</span>
+                            <span class="chip" data-symptom="головная боль">🤕 голова</span>
+                            <span class="chip" data-symptom="тошнота">🤢 тошнота</span>
+                            <span class="chip" data-symptom="усталость">😴 усталость</span>
+                            <span class="chip" data-symptom="перепады настроения">😤 настроение</span>
+                            <span class="chip" data-symptom="другое">📌 другое</span>
+                        </div>
+                        <button class="btn btn-sm btn-primary" id="save-symptom" style="margin-top:8px;">✅ Сохранить</button>
+                    </div>
+                    <div id="today-events" style="margin-top:8px; font-size:14px; color:var(--text-secondary);"></div>
+                </div>
+
+                <!-- Быстрые заметки -->
+                <div class="card">
+                    <div class="card-title">💬 Заметки</div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="btn btn-sm btn-outline" id="quick-spotting">🩸 Выделения</button>
+                        <button class="btn btn-sm btn-outline" id="quick-mood">😊 Настроение</button>
+                        <button class="btn btn-sm btn-outline" id="quick-pain">💢 Боль</button>
+                    </div>
+                    <div id="quick-extra" style="margin-top:8px;"></div>
+                </div>
+            </div>
+
+            <!-- ===== Вкладка "Мигрень" ===== -->
+            <div id="tab-migraine" class="page">
+                <div class="card">
+                    <div class="card-title">🧠 Запись мигрени</div>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                        <button class="btn btn-sm btn-outline" id="migraine-yes">😣 Болела</button>
+                        <button class="btn btn-sm btn-outline" id="migraine-no">😌 Не болела</button>
+                    </div>
+                    <div id="migraine-meds" style="display:none; margin-top:8px;">
+                        <p style="font-size:14px; margin-bottom:6px;">💊 Что использовали?</p>
+                        <div class="chip-group" id="med-chips">
+                            <span class="chip" data-med="нурофен">Нурофен</span>
+                            <span class="chip" data-med="эскенза 1 пшик">Эскенза 1 пшик</span>
+                            <span class="chip" data-med="эскенза 2 пшика">Эскенза 2 пшика</span>
+                            <span class="chip" data-med="другое">Другое</span>
+                        </div>
+                        <button class="btn btn-sm btn-primary" id="save-migraine" style="margin-top:8px;">💾 Сохранить</button>
+                    </div>
+                    <div id="migraine-today-info" style="margin-top:8px; font-size:14px; color:var(--text-secondary);"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📅 Календарь мигреней</div>
+                    <div class="calendar-nav">
+                        <button class="btn btn-sm btn-outline" id="migraine-prev-month">◀</button>
+                        <span class="month-year" id="migraine-month-year">Март 2026</span>
+                        <button class="btn btn-sm btn-outline" id="migraine-next-month">▶</button>
+                    </div>
+                    <div class="calendar-grid" id="migraine-calendar-grid"></div>
+                </div>
+            </div>
+
+            <!-- ===== Вкладка "Статистика" ===== -->
+            <div id="tab-stats" class="page">
+                <div class="card">
+                    <div class="card-title">📊 Статистика цикла</div>
+                    <div id="stats-content">
+                        <p>Средняя длина цикла: <span id="avg-cycle">—</span> дней</p>
+                        <p>Последние месячные: <span id="last-period">—</span></p>
+                        <p>Количество ПА: <span id="intercourse-count">0</span></p>
+                        <p>Текущая фаза: <span id="current-phase">—</span></p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🧠 Статистика мигреней</div>
+                    <div id="migraine-stats">
+                        <p>Всего дней с мигренью: <span id="migraine-count">0</span></p>
+                        <p>Часто используемое средство: <span id="top-med">—</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== Вкладка "Советы" ===== -->
+            <div id="tab-tips" class="page">
+                <div class="card">
+                    <div class="card-title">💡 Советы на сегодня</div>
+                    <div id="tips-container" class="tips-container">
+                        <div class="tip-item">
+                            <div class="tip-label">📋 План на день</div>
+                            <div class="tip-text" id="tip-plan">Загрузка...</div>
+                        </div>
+                        <div class="tip-item">
+                            <div class="tip-label">💬 Совет</div>
+                            <div class="tip-text" id="tip-advice">Загрузка...</div>
+                        </div>
+                        <div class="tip-item">
+                            <div class="tip-label">🌸 Подбадривание</div>
+                            <div class="tip-text" id="tip-cheer">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Подпись -->
+            <div class="footer-signature">
+                <span>с любовью от кисунчика</span> 💕
+            </div>
+
+        </div><!-- /page-main -->
+    </div>
+</div>
+
+<!-- ========================================= -->
+<!-- FIREBASE + ЛОГИКА -->
+<!-- ========================================= -->
+<script type="module">
+    // ===== Импорт Firebase =====
+    import { initializeApp } from 'firebase/app';
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, arrayRemove, onSnapshot } from 'firebase/firestore';
+
+    // ===== ВАШ КОНФИГ FIREBASE =====
+    const firebaseConfig = {
+        apiKey: "AIzaSyD7vrh0Pi8xY08CCq2ZmKPDM3NdYfB27_o",
+        authDomain: "victoria-calendar-947d4.firebaseapp.com",
+        projectId: "victoria-calendar-947d4",
+        storageBucket: "victoria-calendar-947d4.firebasestorage.app",
+        messagingSenderId: "277650954776",
+        appId: "1:277650954776:web:9eee2fa1750d948ac5816d",
+        measurementId: "G-YBVLZEE93C"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ===== Хардкод пользователей =====
+    const ADMIN_EMAIL = 'kostya@mail.com';
+    const GIRL_EMAIL = 'vika@mail.com';
+
+    // ===== Элементы DOM =====
+    const pageLogin = document.getElementById('page-login');
+    const pageMain = document.getElementById('page-main');
+    const loginForm = document.getElementById('login-form');
+    const loginEmail = document.getElementById('login-email');
+    const loginPassword = document.getElementById('login-password');
+    const loginError = document.getElementById('login-error');
+    const logoutBtn = document.getElementById('logout-btn');
+    const themeToggle = document.getElementById('theme-toggle');
+    const profileSwitchContainer = document.getElementById('profile-switch-container');
+    const profileBtns = profileSwitchContainer.querySelectorAll('.profile-switch button');
+
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const pages = {
+        cycle: document.getElementById('tab-cycle'),
+        migraine: document.getElementById('tab-migraine'),
+        stats: document.getElementById('tab-stats'),
+        tips: document.getElementById('tab-tips'),
+    };
+
+    // ===== Утилиты =====
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+    function todayStr() {
+        return formatDate(new Date());
+    }
+    function parseDate(str) {
+        const parts = str.split('-');
+        return new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    }
+    function getMonthName(month) {
+        return ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'][month];
+    }
+
+    // ===== Состояние =====
+    let currentUser = null;         // объект пользователя Firebase
+    let isAdmin = false;
+    let viewingProfile = 'me';      // 'me' или 'her'
+    let userData = { cycles: [], migraines: [] };
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    let migraineMonth = currentMonth;
+    let migraineYear = currentYear;
+    let unsubscribe = null;
+    let currentDocId = '';          // email текущего просматриваемого профиля
+
+    // ===== Работа с Firestore (по email) =====
+    function getUserDocRef(email) {
+        return doc(db, 'users', email);
+    }
+
+    async function loadUserData(email) {
+        const ref = getUserDocRef(email);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+            userData = snap.data();
+        } else {
+            userData = { cycles: [], migraines: [] };
+            await setDoc(ref, userData);
+        }
+        if (!userData.cycles) userData.cycles = [];
+        if (!userData.migraines) userData.migraines = [];
+        currentDocId = email;
+        renderAll();
+    }
+
+    async function saveUserData(email) {
+        if (!email) return;
+        const ref = getUserDocRef(email);
+        await setDoc(ref, userData, { merge: true });
+    }
+
+    function subscribeUserData(email) {
+        const ref = getUserDocRef(email);
+        return onSnapshot(ref, (snap) => {
+            if (snap.exists()) {
+                userData = snap.data();
+                if (!userData.cycles) userData.cycles = [];
+                if (!userData.migraines) userData.migraines = [];
+                renderAll();
+            }
+        });
+    }
+
+    // ===== Аутентификация =====
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = loginEmail.value.trim();
+        const password = loginPassword.value.trim();
+        loginError.textContent = '';
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (err) {
+            loginError.textContent = 'Ошибка: ' + err.message;
+        }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+        await signOut(auth);
+    });
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUser = user;
+            const email = user.email;
+            // Определяем роль
+            isAdmin = (email === ADMIN_EMAIL);
+            const isGirl = (email === GIRL_EMAIL);
+
+            // Проверяем, что вход разрешён только для наших двух пользователей
+            if (!isAdmin && !isGirl) {
+                loginError.textContent = 'Доступ запрещён. Только для kostya@mail.com и vika@mail.com.';
+                signOut(auth);
+                return;
+            }
+
+            pageLogin.style.display = 'none';
+            pageLogin.classList.remove('active');
+            pageMain.style.display = 'block';
+            pageMain.classList.add('active');
+
+            // Показываем переключение профилей только админу
+            if (isAdmin) {
+                profileSwitchContainer.style.display = 'block';
+                viewingProfile = 'me';
+                profileBtns.forEach(b => b.classList.toggle('active', b.dataset.profile === 'me'));
+            } else {
+                profileSwitchContainer.style.display = 'none';
+                viewingProfile = 'me';
+            }
+
+            // Загружаем данные для текущего профиля
+            const targetEmail = (isAdmin && viewingProfile === 'her') ? GIRL_EMAIL : email;
+            loadUserData(targetEmail);
+            if (unsubscribe) unsubscribe();
+            unsubscribe = subscribeUserData(targetEmail);
+
+            setupReminder();
+        } else {
+            if (unsubscribe) unsubscribe();
+            currentUser = null;
+            pageLogin.style.display = 'block';
+            pageLogin.classList.add('active');
+            pageMain.style.display = 'none';
+            pageMain.classList.remove('active');
+        }
+    });
+
+    // Переключение профиля (только для админа)
+    profileBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            profileBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            viewingProfile = btn.dataset.profile;
+            if (isAdmin && currentUser) {
+                const targetEmail = (viewingProfile === 'her') ? GIRL_EMAIL : ADMIN_EMAIL;
+                if (unsubscribe) unsubscribe();
+                unsubscribe = subscribeUserData(targetEmail);
+                loadUserData(targetEmail);
+            }
+        });
+    });
+
+    // ===== Напоминание =====
+    function setupReminder() {
+        setInterval(() => {
+            const now = new Date();
+            if (now.getHours() === 20 && now.getMinutes() === 0) {
+                if (Notification.permission === 'granted') {
+                    new Notification('🌸 Напоминание', {
+                        body: 'Не забудь записать сегодняшние данные!',
+                        icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ctext y=".9em" font-size="90"%3E🌸%3C/text%3E%3C/svg%3E'
+                    });
+                } else if (Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
+        }, 60000);
+        if (Notification.permission === 'default') Notification.requestPermission();
+    }
+
+    // ===== Определение фазы цикла =====
+    function getCyclePhase(cycles) {
+        const periodEntries = cycles.filter(e => e.type === 'period').sort((a,b) => a.date.localeCompare(b.date));
+        if (periodEntries.length === 0) return 'unknown';
+        const last = periodEntries[periodEntries.length - 1];
+        const today = new Date();
+        const lastDate = parseDate(last.date);
+        const diffDays = Math.floor((today - lastDate) / (1000*60*60*24));
+        if (diffDays <= 5) return 'menstrual';
+        else if (diffDays <= 13) return 'follicular';
+        else if (diffDays <= 15) return 'ovulation';
+        else if (diffDays <= 28) return 'luteal';
+        else return 'unknown';
+    }
+
+    // ===== БОЛЬШАЯ БАЗА СОВЕТОВ =====
+    const TIPS_DB = {
+        menstrual: {
+            plans: [
+                'Сегодня отдыхай, поменьше нагрузок. Пей тёплую воду, можно травяной чай с ромашкой.',
+                'Позволь себе замедлиться. Лёгкая йога или растяжка помогут снять напряжение.',
+                'Послушай своё тело: если хочется спать — поспи. Кисунчик разрешает.',
+                'Сделай дыхательную гимнастику: вдох на 4 счета, выдох на 6. Это успокоит нервную систему.',
+                'Побалуй себя тёплой ванной с морской солью — это снимет спазмы.'
+            ],
+            advices: [
+                'Если боль сильная, прими обезболивающее (например, ибупрофен). Но лучше сначала попробовать тепло.',
+                'Магний и витамин В6 помогают уменьшить дискомфорт. Кисунчик рекомендует включить их в рацион.',
+                'Ограничь кофеин и солёное — они усиливают задержку жидкости и спазмы.',
+                'Лёгкий массаж живота по часовой стрелке облегчает боль.',
+                'Попробуй ароматерапию с лавандой или мятой — они расслабляют.'
+            ],
+            cheers: [
+                'Ты сильная! Каждый месяц ты проходишь через это, и кисунчик гордится тобой. ❤️',
+                'Этот день — повод заботиться о себе. Ты — центр вселенной для кисунчика.',
+                'Ты справляешься даже в самые тяжёлые дни. Твоя сила восхищает.',
+                'Помни: после дождя всегда солнце. Скоро ты снова будешь полна энергии.',
+                'Ты — невероятная женщина, и каждая твоя клеточка заслуживает любви.'
+            ]
+        },
+        follicular: {
+            plans: [
+                'Отличное время для активности! Займись лёгким спортом или прогулкой на свежем воздухе.',
+                'Начни новый проект или запишись на курс — сейчас энергия на подъёме.',
+                'Сделай уборку или переставь мебель — движение принесёт радость.',
+                'Сходи на свидание или встреться с подругами — ты будешь особенно обаятельна.',
+                'Планируй важные дела на эту неделю — твой мозг работает ясно.'
+            ],
+            advices: [
+                'Сейчас организм полон эстрогена, это время красоты. Добавь в уход за кожей антиоксиданты.',
+                'Увеличь потребление белка и зелёных овощей — они поддержат твой тонус.',
+                'Кисунчик советует начать вести дневник благодарности — запиши 3 вещи, за которые ты благодарна.',
+                'Попробуй что-то новое: новый рецепт, новый маршрут прогулки — это зарядит энергией.',
+                'Сейчас отличное время для переговоров и важных разговоров — твоя речь ясна и убедительна.'
+            ],
+            cheers: [
+                'Ты полна сил, как весенний цветок! Кисунчик рядом. 🌸',
+                'Твоя энергия заражает! Сегодня ты можешь свернуть горы.',
+                'Ты сияешь! Лови момент и наслаждайся каждой минутой.',
+                'Кисунчик видит, как ты прекрасна. Ты вдохновляешь!',
+                'Это твоё время — действуй, твори, люби!'
+            ]
+        },
+        ovulation: {
+            plans: [
+                'Пик энергии и хорошего настроения. Проведи время с любимыми, устрой романтический ужин.',
+                'Сегодня ты особенно привлекательна — воспользуйся этим для важных встреч.',
+                'Творчество и самореализация — вот твои попутчики. Напиши стихи или нарисуй.',
+                'Запланируй активный отдых: танцы, бассейн или просто долгую прогулку в парке.',
+                'Позвони родным или напиши письмо друзьям — сейчас отличное время для общения.'
+            ],
+            advices: [
+                'В период овуляции повышается либидо — это нормально. Кисунчик советует слушать свои желания.',
+                'Пей больше воды, чтобы поддерживать водный баланс — твоя кожа скажет спасибо.',
+                'Добавь в рацион продукты, богатые цинком (тыквенные семечки, морепродукты) — они полезны для гормонов.',
+                'Это время для смелых решений. Если давно хотела что-то изменить — сейчас самый момент.',
+                'Не забывай про физическую активность, но избегай перегрузок — баланс важнее.'
+            ],
+            cheers: [
+                'Ты прекрасна! Сияй как звёздочка, кисунчик обожает тебя. 💫',
+                'Сегодня ты на вершине! Лови эту волну и наслаждайся.',
+                'Твоя магия действует на всех вокруг. Ты неотразима.',
+                'Кисунчик в восторге от твоей энергии. Ты — чудо!',
+                'Наслаждайся этим днём, он особенный — как и ты.'
+            ]
+        },
+        luteal: {
+            plans: [
+                'Может появиться усталость. Снизь нагрузку, больше отдыхай, удели время хобби.',
+                'Сегодня хорошо провести вечер за книгой или фильмом. Расслабься.',
+                'Занимайся спокойными практиками: йога, пилатес, медитация.',
+                'Сделай план на следующую неделю, но не перегружай себя — действуй в комфортном темпе.',
+                'Побалуй себя вкусным ужином, но избегай сладкого — оно может усилить колебания настроения.'
+            ],
+            advices: [
+                'Следи за питанием, добавь магний и витамины группы В — они помогают при ПМС.',
+                'Кисунчик рекомендует тёплый напиток с мелиссой или мятой перед сном.',
+                'Если настроение скачет, попробуй технику заземления: назови 5 вещей вокруг себя — это поможет успокоиться.',
+                'Ты можешь быть более раздражительной — это нормально. Попроси близких отнестись с пониманием.',
+                'Запиши свои эмоции в дневник — это поможет снизить тревожность.'
+            ],
+            cheers: [
+                'Ты справляешься! Скоро новые силы, а пока кисунчик с тобой. 💕',
+                'Ты — как луна, и у тебя есть право на смену фаз. Ты прекрасна в любой из них.',
+                'Держись! Этот день скоро закончится, а ты останешься той же сильной личностью.',
+                'Твоя выносливость поражает. Кисунчик гордится тобой.',
+                'Помни, что ты не одна — я здесь, чтобы поддержать тебя.'
+            ]
+        },
+        unknown: {
+            plans: [
+                'Следи за своим самочувствием. Веди дневник, чтобы лучше понимать цикл.',
+                'Сегодня — день экспериментов: попробуй новый вид активности или питания.',
+                'Проведи время на природе — это всегда полезно.',
+                'Сделай небольшой чек-ап: измерь давление, вес, оцени настроение.',
+                'Просто будь в моменте, не загадывай далеко — кисунчик с тобой.'
+            ],
+            advices: [
+                'Кисунчик советует регулярно записывать все ощущения — это поможет выявить закономерности.',
+                'Если цикл нерегулярный, обрати внимание на стресс и питание — они часто влияют.',
+                'Попробуй вести календарь настроения — это даст много полезной информации.',
+                'Не бойся обращаться к врачу, если что-то беспокоит. Забота о себе — главное.',
+                'Ты уникальна, и каждый цикл — это твой личный ритм. Принимай его.'
+            ],
+            cheers: [
+                'Ты уникальна! Кисунчик всегда поддерживает тебя. 🌟',
+                'Ты — главный герой своей истории, и я рядом, чтобы помочь.',
+                'Каждый день — это новый шанс узнать себя лучше.',
+                'Ты делаешь важное дело — заботишься о себе. Это достойно уважения.',
+                'С тобой всегда кисунчик, который верит в тебя.'
+            ]
+        }
+    };
+
+    const MIGRAINE_TIPS = {
+        plan: 'Если у тебя мигрень, сегодня лучше отдохнуть в тихом тёмном месте. Отложи все дела.',
+        advice: 'Кисунчик советует принять обезболивающее (какое ты обычно используешь) и сделать холодный компресс на лоб. Постарайся уснуть.',
+        cheer: 'Ты справишься! Мигрень — это всего лишь временное испытание. Кисунчик рядом, он держит тебя за руку. 💙'
+    };
+
+    function getUniqueTip(phase, cycleDay, hasSymptoms, hasMigraine, hasIntercourse) {
+        if (hasMigraine) return MIGRAINE_TIPS;
+
+        const phaseData = TIPS_DB[phase] || TIPS_DB.unknown;
+        const seed = (cycleDay * 7 + new Date().getDate() + new Date().getMonth()) % 100;
+        const planIdx = (cycleDay + seed) % phaseData.plans.length;
+        const adviceIdx = (cycleDay + seed + 3) % phaseData.advices.length;
+        const cheerIdx = (cycleDay + seed + 7) % phaseData.cheers.length;
+
+        let plan = phaseData.plans[planIdx];
+        let advice = phaseData.advices[adviceIdx];
+        let cheer = phaseData.cheers[cheerIdx];
+
+        if (hasSymptoms && phase === 'luteal') {
+            advice += ' (Если заметила ПМС-симптомы, попробуй добавить витамин В6 и магний.)';
+        }
+        if (hasSymptoms && phase === 'menstrual') {
+            advice += ' Если боль сильная, не терпи — прими разрешённое средство. Кисунчик заботится о тебе.';
+        }
+        if (hasIntercourse && phase === 'ovulation') {
+            plan = 'Сегодня особенно благоприятный день для близости. Наслаждайся моментом!';
+        }
+        if (hasIntercourse && phase === 'follicular') {
+            advice += ' (ПА в эту фазу часто приносит удовольствие — не забывай о контрацепции, если она нужна.)';
+        }
+
+        return { plan, advice, cheer };
+    }
+
+    // ===== Рендеринг =====
+    function renderAll() {
+        renderCalendar();
+        renderToday();
+        renderMigraineCalendar();
+        renderMigraineToday();
+        renderStats();
+        renderTips();
+    }
+
+    // --- Календарь цикла ---
+    function renderCalendar() {
+        const grid = document.getElementById('calendar-grid');
+        const monthYear = document.getElementById('month-year');
+        monthYear.textContent = `${getMonthName(currentMonth)} ${currentYear}`;
+
+        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+        const today = new Date();
+
+        let html = '';
+        const weekDays = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+        for (let d of weekDays) {
+            html += `<div style="text-align:center; font-size:12px; color:var(--text-secondary);">${d}</div>`;
+        }
+
+        let offset = (firstDay === 0) ? 6 : firstDay - 1;
+        for (let i=0; i<offset; i++) html += `<div></div>`;
+
+        for (let day=1; day<=daysInMonth; day++) {
+            const dateObj = new Date(currentYear, currentMonth, day);
+            const dateStr = formatDate(dateObj);
+            const isToday = dateStr === todayStr();
+            let classes = 'day';
+            if (isToday) classes += ' today';
+
+            const events = userData.cycles.filter(e => e.date === dateStr);
+            let eventTypes = [];
+            events.forEach(e => {
+                if (e.type === 'period') eventTypes.push('period');
+                if (e.type === 'intercourse') eventTypes.push('intercourse');
+                if (e.type === 'symptom') eventTypes.push('other');
+            });
+            if (eventTypes.includes('period')) classes += ' period';
+            if (eventTypes.includes('intercourse')) classes += ' intercourse';
+            if (eventTypes.some(t => t === 'other')) classes += ' other';
+
+            const migraine = userData.migraines.find(m => m.date === dateStr && m.had === true);
+            if (migraine) classes += ' migraine';
+
+            html += `<div class="${classes}" data-date="${dateStr}">${day}</div>`;
+        }
+        grid.innerHTML = html;
+    }
+
+    // --- Сегодня ---
+    function renderToday() {
+        const todayDate = document.getElementById('today-date');
+        const todayEventsDiv = document.getElementById('today-events');
+        const now = new Date();
+        todayDate.textContent = now.toLocaleDateString('ru-RU', { day:'numeric', month:'long' });
+
+        const dateStr = todayStr();
+        const events = userData.cycles.filter(e => e.date === dateStr);
+        let text = '';
+        if (events.length === 0) text = 'Ничего не записано';
+        else {
+            text = events.map(e => {
+                if (e.type === 'period') return '🩸 Месячные';
+                if (e.type === 'intercourse') return '💞 ПА';
+                if (e.type === 'symptom') return `😣 ${e.details || 'симптом'}`;
+                if (e.type === 'spotting') return `🩸 Выделения: ${e.details || ''}`;
+                if (e.type === 'mood') return `😊 Настроение: ${e.details || ''}`;
+                if (e.type === 'pain') return `💢 Боль: ${e.details || ''}`;
+                return e.type;
+            }).join(', ');
+        }
+        todayEventsDiv.textContent = text;
+        document.getElementById('symptom-container').style.display = 'none';
+    }
+
+    // --- Календарь мигрени ---
+    function renderMigraineCalendar() {
+        const grid = document.getElementById('migraine-calendar-grid');
+        const monthYear = document.getElementById('migraine-month-year');
+        monthYear.textContent = `${getMonthName(migraineMonth)} ${migraineYear}`;
+
+        const firstDay = new Date(migraineYear, migraineMonth, 1).getDay();
+        const daysInMonth = new Date(migraineYear, migraineMonth+1, 0).getDate();
+
+        let html = '';
+        const weekDays = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+        for (let d of weekDays) {
+            html += `<div style="text-align:center; font-size:12px; color:var(--text-secondary);">${d}</div>`;
+        }
+        let offset = (firstDay === 0) ? 6 : firstDay - 1;
+        for (let i=0; i<offset; i++) html += `<div></div>`;
+
+        for (let day=1; day<=daysInMonth; day++) {
+            const dateObj = new Date(migraineYear, migraineMonth, day);
+            const dateStr = formatDate(dateObj);
+            const isToday = dateStr === todayStr();
+            let classes = 'day';
+            if (isToday) classes += ' today';
+
+            const migraine = userData.migraines.find(m => m.date === dateStr);
+            if (migraine && migraine.had) classes += ' migraine';
+
+            html += `<div class="${classes}" data-date="${dateStr}">${day}</div>`;
+        }
+        grid.innerHTML = html;
+    }
+
+    function renderMigraineToday() {
+        const info = document.getElementById('migraine-today-info');
+        const dateStr = todayStr();
+        const entry = userData.migraines.find(m => m.date === dateStr);
+        if (entry) {
+            info.textContent = `Сегодня: ${entry.had ? '😣 болела' : '😌 не болела'} ${entry.med ? `(принято: ${entry.med})` : ''}`;
+        } else {
+            info.textContent = 'Сегодня не записано';
+        }
+    }
+
+    // --- Статистика ---
+    function renderStats() {
+        const periodEntries = userData.cycles.filter(e => e.type === 'period').sort((a,b) => a.date.localeCompare(b.date));
+        let avgCycle = '—';
+        let lastPeriod = '—';
+        if (periodEntries.length >= 2) {
+            let total = 0;
+            for (let i=1; i<periodEntries.length; i++) {
+                const prev = parseDate(periodEntries[i-1].date);
+                const curr = parseDate(periodEntries[i].date);
+                total += Math.round((curr - prev) / (1000*60*60*24));
+            }
+            avgCycle = Math.round(total / (periodEntries.length - 1));
+        }
+        if (periodEntries.length > 0) lastPeriod = periodEntries[periodEntries.length-1].date;
+        document.getElementById('avg-cycle').textContent = avgCycle;
+        document.getElementById('last-period').textContent = lastPeriod;
+        document.getElementById('intercourse-count').textContent = userData.cycles.filter(e => e.type === 'intercourse').length;
+
+        const phase = getCyclePhase(userData.cycles);
+        const phaseNames = {
+            menstrual: 'Менструальная',
+            follicular: 'Фолликулярная',
+            ovulation: 'Овуляторная',
+            luteal: 'Лютеиновая',
+            unknown: 'Неизвестна'
+        };
+        document.getElementById('current-phase').textContent = phaseNames[phase] || '—';
+        // сохраним фазу для советов (она уже используется)
+        window._currentPhase = phase;
+
+        const migraines = userData.migraines.filter(m => m.had === true);
+        document.getElementById('migraine-count').textContent = migraines.length;
+        const medCount = {};
+        migraines.forEach(m => { if (m.med) medCount[m.med] = (medCount[m.med]||0)+1; });
+        let topMed = '—', maxCount = 0;
+        for (let [med, count] of Object.entries(medCount)) {
+            if (count > maxCount) { maxCount = count; topMed = med; }
+        }
+        document.getElementById('top-med').textContent = topMed;
+    }
+
+    // --- Советы ---
+    function renderTips() {
+        const phase = getCyclePhase(userData.cycles);
+        // Вычисляем день цикла
+        let cycleDay = 1;
+        const periodEntries = userData.cycles.filter(e => e.type === 'period').sort((a,b) => a.date.localeCompare(b.date));
+        if (periodEntries.length > 0) {
+            const lastPeriod = periodEntries[periodEntries.length - 1];
+            const diff = Math.floor((new Date() - parseDate(lastPeriod.date)) / (1000*60*60*24)) + 1;
+            if (diff > 0 && diff <= 35) cycleDay = diff;
+        }
+
+        const today = todayStr();
+        const todaysCycles = userData.cycles.filter(e => e.date === today);
+        const hasSymptoms = todaysCycles.some(e => e.type === 'symptom' || e.type === 'pain' || e.type === 'spotting');
+        const hasIntercourse = todaysCycles.some(e => e.type === 'intercourse');
+        const todayMigraine = userData.migraines.find(m => m.date === today);
+        const hasMigraine = todayMigraine ? todayMigraine.had : false;
+
+        const tips = getUniqueTip(phase, cycleDay, hasSymptoms, hasMigraine, hasIntercourse);
+        document.getElementById('tip-plan').textContent = tips.plan;
+        document.getElementById('tip-advice').textContent = tips.advice;
+        document.getElementById('tip-cheer').textContent = tips.cheer;
+    }
+
+    // ===== Обработчики событий =====
+
+    // Месячные
+    document.getElementById('btn-period').addEventListener('click', async () => {
+        if (!currentUser || !currentDocId) return;
+        const dateStr = todayStr();
+        userData.cycles = userData.cycles.filter(e => !(e.date === dateStr && e.type === 'period'));
+        userData.cycles.push({ date: dateStr, type: 'period' });
+        await saveUserData(currentDocId);
+        renderAll();
+    });
+
+    // ПА
+    document.getElementById('btn-intercourse').addEventListener('click', async () => {
+        if (!currentUser || !currentDocId) return;
+        userData.cycles.push({ date: todayStr(), type: 'intercourse' });
+        await saveUserData(currentDocId);
+        renderAll();
+    });
+
+    // Симптомы
+    document.getElementById('btn-symptom').addEventListener('click', () => {
+        const container = document.getElementById('symptom-container');
+        container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        document.querySelectorAll('#symptom-chips .chip').forEach(c => c.classList.remove('selected'));
+    });
+    document.querySelectorAll('#symptom-chips .chip').forEach(chip => {
+        chip.addEventListener('click', () => chip.classList.toggle('selected'));
+    });
+    document.getElementById('save-symptom').addEventListener('click', async () => {
+        if (!currentUser || !currentDocId) return;
+        const selected = document.querySelectorAll('#symptom-chips .chip.selected');
+        if (selected.length === 0) return;
+        const symptoms = Array.from(selected).map(c => c.dataset.symptom);
+        const dateStr = todayStr();
+        for (let sym of symptoms) {
+            userData.cycles.push({ date: dateStr, type: 'symptom', details: sym });
+        }
+        await saveUserData(currentDocId);
+        renderAll();
+        document.getElementById('symptom-container').style.display = 'none';
+    });
+
+    // Быстрые заметки
+    document.getElementById('quick-spotting').addEventListener('click', async () => {
+        if (!currentUser || !currentDocId) return;
+        const val = prompt('🩸 Опишите выделения');
+        if (val) { userData.cycles.push({ date: todayStr(), type: 'spotting', details: val }); await saveUserData(currentDocId); renderAll(); }
+    });
+    document.getElementById('quick-mood').addEventListener('click', async () => {
+        if (!currentUser || !currentDocId) return;
+        const val = prompt('😊 Какое настроение?');
+        if (val) { userData.cycles.push({ date: todayStr(), type: 'mood', details: val }); await saveUserData(currentDocId); renderAll(); }
+    });
+    document.getElementById('quick-pain').addEventListener('click', async () => {
+        if (!currentUser || !currentDocId) return;
+        const val = prompt('💢 Где и как болит?');
+        if (val) { userData.cycles.push({ date: todayStr(), type: 'pain', details: val }); await saveUserData(currentDocId); renderAll(); }
+    });
+
+    // Навигация календаря
+    document.getElementById('prev-month').addEventListener('click', () => {
+        if (currentMonth === 0) { currentMonth = 11; currentYear--; } else currentMonth--;
+        renderCalendar();
+    });
+    document.getElementById('next-month').addEventListener('click', () => {
+        if (currentMonth === 11) { currentMonth = 0; currentYear++; } else currentMonth++;
+        renderCalendar();
+    });
+
+    // Клик по дню – показываем модалку с удалением
+    document.getElementById('calendar-grid').addEventListener('click', (e) => {
+        const dayEl = e.target.closest('.day');
+        if (!dayEl) return;
+        const dateStr = dayEl.dataset.date;
+        if (!dateStr) return;
+        showModalForDate(dateStr);
+    });
+
+    // Модальное окно
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalEventsList = document.getElementById('modal-events-list');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+
+    function showModalForDate(dateStr) {
+        const events = userData.cycles.filter(e => e.date === dateStr);
+        const migraines = userData.migraines.filter(m => m.date === dateStr);
+        if (events.length === 0 && migraines.length === 0) {
+            alert('Нет записей на эту дату.');
+            return;
+        }
+        modalTitle.textContent = `📅 ${dateStr}`;
+        let html = '';
+        events.forEach((e, index) => {
+            let label = '';
+            if (e.type === 'period') label = '🩸 Месячные';
+            else if (e.type === 'intercourse') label = '💞 ПА';
+            else if (e.type === 'symptom') label = `😣 ${e.details || 'симптом'}`;
+            else if (e.type === 'spotting') label = `🩸 Выделения: ${e.details}`;
+            else if (e.type === 'mood') label = `😊 Настроение: ${e.details}`;
+            else if (e.type === 'pain') label = `💢 Боль: ${e.details}`;
+            else label = e.type;
+            html += `<div class="event-item">
+                        <span>${label}</span>
+                        <button class="del-btn" data-index="${index}" data-type="cycle">Удалить</button>
+                     </div>`;
+        });
+        migraines.forEach((m, index) => {
+            const label = `🧠 Мигрень: ${m.had ? 'была' : 'не было'} ${m.med ? `(${m.med})` : ''}`;
+            html += `<div class="event-item">
+                        <span>${label}</span>
+                        <button class="del-btn" data-index="${index}" data-type="migraine">Удалить</button>
+                     </div>`;
+        });
+        modalEventsList.innerHTML = html;
+        modalOverlay.classList.add('active');
+
+        // Обработчики удаления
+        modalEventsList.querySelectorAll('.del-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const idx = parseInt(btn.dataset.index);
+                const type = btn.dataset.type;
+                if (type === 'cycle') {
+                    userData.cycles.splice(idx, 1);
+                } else if (type === 'migraine') {
+                    userData.migraines.splice(idx, 1);
+                }
+                await saveUserData(currentDocId);
+                renderAll();
+                showModalForDate(dateStr);
+            });
+        });
+    }
+
+    modalCloseBtn.addEventListener('click', () => {
+        modalOverlay.classList.remove('active');
+    });
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+    });
+
+    // Мигрень
+    document.getElementById('migraine-yes').addEventListener('click', () => {
+        document.getElementById('migraine-meds').style.display = 'block';
+        document.querySelectorAll('#med-chips .chip').forEach(c => c.classList.remove('selected'));
+    });
+    document.getElementById('migraine-no').addEventListener('click', async () => {
+        if (!currentUser || !currentDocId) return;
+        const dateStr = todayStr();
+        userData.migraines = userData.migraines.filter(m => m.date !== dateStr);
+        userData.migraines.push({ date: dateStr, had: false, med: null });
+        await saveUserData(currentDocId);
+        renderAll();
+        document.getElementById('migraine-meds').style.display = 'none';
+    });
+    document.querySelectorAll('#med-chips .chip').forEach(chip => {
+        chip.addEventListener('click', () => chip.classList.toggle('selected'));
+    });
+    document.getElementById('save-migraine').addEventListener('click', async () => {
+        if (!currentUser || !currentDocId) return;
+        const dateStr = todayStr();
+        const selected = document.querySelector('#med-chips .chip.selected');
+        const med = selected ? selected.dataset.med : null;
+        userData.migraines = userData.migraines.filter(m => m.date !== dateStr);
+        userData.migraines.push({ date: dateStr, had: true, med: med });
+        await saveUserData(currentDocId);
+        renderAll();
+        document.getElementById('migraine-meds').style.display = 'none';
+    });
+
+    // Навигация мигрень-календарь
+    document.getElementById('migraine-prev-month').addEventListener('click', () => {
+        if (migraineMonth === 0) { migraineMonth = 11; migraineYear--; } else migraineMonth--;
+        renderMigraineCalendar();
+    });
+    document.getElementById('migraine-next-month').addEventListener('click', () => {
+        if (migraineMonth === 11) { migraineMonth = 0; migraineYear++; } else migraineMonth++;
+        renderMigraineCalendar();
+    });
+    document.getElementById('migraine-calendar-grid').addEventListener('click', (e) => {
+        const dayEl = e.target.closest('.day');
+        if (!dayEl) return;
+        const dateStr = dayEl.dataset.date;
+        if (!dateStr) return;
+        const entry = userData.migraines.find(m => m.date === dateStr);
+        let msg = `🧠 ${dateStr}\n`;
+        if (entry) msg += entry.had ? 'Болела' : 'Не болела' + (entry.med ? `\nПринято: ${entry.med}` : '');
+        else msg += 'Нет записи';
+        alert(msg);
+    });
+
+    // Переключение вкладок
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tabId = btn.dataset.tab;
+            Object.values(pages).forEach(p => p.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            renderAll();
+        });
+    });
+
+    // ===== ТЕМЫ =====
+    let currentTheme = 'purple';
+    themeToggle.addEventListener('click', () => {
+        currentTheme = (currentTheme === 'purple') ? 'black' : 'purple';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        localStorage.setItem('theme', currentTheme);
+    });
+    const savedTheme = localStorage.getItem('theme') || 'purple';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    currentTheme = savedTheme;
+
+    console.log('🌸 С любовью от кисунчика!');
+</script>
+</body>
+</html>
