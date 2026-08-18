@@ -766,7 +766,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ===== НОВЫЕ EMAIL ПОЛЬЗОВАТЕЛЕЙ =====
+    // ===== НОВЫЕ EMAIL (приводим к нижнему регистру для сравнения) =====
     const ADMIN_EMAIL = 'kostya@kostya.com';
     const GIRL_EMAIL = 'vika@vika.com';
 
@@ -935,14 +935,23 @@
         if (user) {
             currentUser = user;
             const email = user.email;
-            isAdmin = (email === ADMIN_EMAIL);
-            const isGirl = (email === GIRL_EMAIL);
+            console.log('🔑 Вошли с email:', email);
+
+            // Приводим к нижнему регистру для сравнения
+            const normalizedEmail = email.toLowerCase();
+            const adminNormalized = ADMIN_EMAIL.toLowerCase();
+            const girlNormalized = GIRL_EMAIL.toLowerCase();
+
+            isAdmin = (normalizedEmail === adminNormalized);
+            const isGirl = (normalizedEmail === girlNormalized);
+
             if (!isAdmin && !isGirl) {
-                loginError.textContent = 'Доступ запрещён.';
-                showToast('❌ Доступ запрещён');
+                loginError.textContent = 'Доступ запрещён. Ваш email: ' + email;
+                showToast('❌ Доступ запрещён для ' + email);
                 signOut(auth);
                 return;
             }
+
             pageLogin.style.display = 'none';
             pageLogin.classList.remove('active');
             pageMain.style.display = 'block';
@@ -1025,7 +1034,7 @@
         return { phase, day: diffDays };
     }
 
-    // ===== БАЗА СОВЕТОВ (сокращённо, но много вариантов) =====
+    // ===== БАЗА СОВЕТОВ =====
     const TIPS_DB = {
         menstrual: {
             plans: ['Отдыхай, пей тёплую воду.', 'Лёгкая йога поможет.', 'Послушай тело, поспи.', 'Дыхательная гимнастика.', 'Тёплая ванна с солью.'],
