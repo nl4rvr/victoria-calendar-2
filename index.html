@@ -15,7 +15,7 @@
         }
     </script>
     <style>
-        /* ===== ТЕМЫ (без изменений, только добавил новый класс .phase-badge) ===== */
+        /* ===== ТЕМЫ ===== */
         :root {
             --bg-start: #f7f0fc;
             --bg-end: #e6d9f0;
@@ -30,6 +30,8 @@
             --card-bg: rgba(255, 255, 255, 0.4);
             --input-bg: rgba(255, 255, 255, 0.4);
             --placeholder-color: rgba(45, 27, 61, 0.4);
+            --toast-bg: rgba(0,0,0,0.8);
+            --toast-color: #fff;
         }
 
         [data-theme="black"] {
@@ -46,6 +48,8 @@
             --card-bg: rgba(30, 20, 40, 0.5);
             --input-bg: rgba(60, 40, 70, 0.5);
             --placeholder-color: rgba(200, 180, 210, 0.5);
+            --toast-bg: rgba(255,255,255,0.2);
+            --toast-color: #e8dff0;
         }
 
         [data-theme="purple"] {
@@ -62,6 +66,8 @@
             --card-bg: rgba(200, 170, 220, 0.3);
             --input-bg: rgba(200, 170, 220, 0.4);
             --placeholder-color: rgba(45, 27, 61, 0.4);
+            --toast-bg: rgba(0,0,0,0.7);
+            --toast-color: #fff;
         }
 
         * { margin:0; padding:0; box-sizing:border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -145,7 +151,7 @@
         }
         .header-actions button:active { transform: scale(0.92); }
 
-        /* ===== СНОСКА О ФАЗЕ ===== */
+        /* ===== ФАЗА ===== */
         .phase-badge {
             background: var(--card-bg);
             border-radius: 30px;
@@ -160,13 +166,8 @@
             justify-content: space-between;
             align-items: center;
         }
-        .phase-badge span {
-            opacity: 0.8;
-        }
-        .phase-badge .phase-name {
-            font-weight: 600;
-            color: var(--primary);
-        }
+        .phase-badge span { opacity: 0.8; }
+        .phase-badge .phase-name { font-weight: 600; color: var(--primary); }
 
         .profile-switch {
             display: flex;
@@ -190,7 +191,7 @@
             color: white;
         }
 
-        /* ===== Вкладки ===== */
+        /* ===== ВКЛАДКИ ===== */
         .tabs {
             display: flex;
             gap: 6px;
@@ -278,6 +279,7 @@
             border: 1.5px solid var(--glass-border);
         }
         .btn-sm { padding: 8px 14px; font-size: 13px; }
+        .btn-success { background: #27ae60; color: white; }
         .btn-danger { background: #c0392b; color: white; }
 
         /* ===== КАЛЕНДАРЬ ===== */
@@ -418,7 +420,7 @@
         }
         .footer-signature span { font-weight: 500; color: var(--text-color); }
 
-        /* ===== МОДАЛКА ===== */
+        /* ===== МОДАЛЬНЫЕ ОКНА ===== */
         .modal-overlay {
             position: fixed;
             top:0; left:0; width:100%; height:100%;
@@ -446,6 +448,8 @@
             border: 1px solid var(--glass-border);
             box-shadow: var(--glass-shadow);
             color: var(--text-color);
+            max-height: 80vh;
+            overflow-y: auto;
         }
         .modal-box h3 { margin-bottom: 12px; }
         .modal-box .event-item {
@@ -465,6 +469,12 @@
             cursor: pointer;
             font-size: 12px;
         }
+        .modal-box .empty-message {
+            text-align: center;
+            padding: 20px 0;
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
         .modal-close {
             margin-top: 16px;
             text-align: center;
@@ -477,6 +487,33 @@
             border-radius: 30px;
             font-size: 16px;
             cursor: pointer;
+        }
+
+        /* ===== TOAST (уведомления) ===== */
+        #toast-container {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: var(--toast-bg);
+            backdrop-filter: blur(10px);
+            color: var(--toast-color);
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 16px;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateX(-50%) translateY(20px);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #toast-container.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
 
         /* ===== ГРАФИКИ ===== */
@@ -503,11 +540,14 @@
 </head>
 <body>
 
-<!-- МОДАЛЬНОЕ ОКНО -->
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<!-- МОДАЛЬНОЕ ОКНО (универсальное) -->
 <div class="modal-overlay" id="modal-overlay">
     <div class="modal-box">
         <h3 id="modal-title">📅 События</h3>
-        <div id="modal-events-list"></div>
+        <div id="modal-content"></div>
         <div class="modal-close"><button id="modal-close-btn">Закрыть</button></div>
     </div>
 </div>
@@ -542,14 +582,14 @@
                 </div>
             </div>
 
-            <!-- СНОСКА О ФАЗЕ -->
+            <!-- ФАЗА -->
             <div class="phase-badge" id="phase-badge">
                 <span>📌 Фаза:</span>
                 <span class="phase-name" id="phase-name">—</span>
                 <span>День цикла: <span id="cycle-day">—</span></span>
             </div>
 
-            <!-- ПЕРЕКЛЮЧЕНИЕ ПРОФИЛЕЙ (только админ) -->
+            <!-- ПРОФИЛИ -->
             <div id="profile-switch-container" style="display:none; margin-bottom:12px;">
                 <div class="profile-switch">
                     <button class="active" data-profile="me">👤 Я</button>
@@ -579,12 +619,12 @@
                 <div class="card">
                     <div class="card-title">📝 Сегодня, <span id="today-date"></span></div>
                     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                        <button class="btn btn-sm btn-outline" id="btn-period">🩸 Месячные</button>
-                        <button class="btn btn-sm btn-outline" id="btn-end-period">✅ Завершить месячные</button>
+                        <button class="btn btn-sm btn-primary" id="btn-period">🩸 Месячные</button>
+                        <button class="btn btn-sm btn-outline" id="btn-end-period">✅ Завершить</button>
                         <button class="btn btn-sm btn-outline" id="btn-intercourse">💞 ПА</button>
                         <button class="btn btn-sm btn-outline" id="btn-symptom">😣 Симптом</button>
                     </div>
-                    <!-- Расширенные симптомы -->
+                    <!-- Симптомы -->
                     <div id="symptom-container" style="display:none;">
                         <div class="chip-group" id="symptom-chips">
                             <span class="chip" data-symptom="спазмы">🔥 спазмы</span>
@@ -597,7 +637,7 @@
                             <span class="chip" data-symptom="перепады настроения">😤 настроение</span>
                             <span class="chip" data-symptom="другое">📌 другое</span>
                         </div>
-                        <button class="btn btn-sm btn-primary" id="save-symptom" style="margin-top:8px;">✅ Сохранить</button>
+                        <button class="btn btn-sm btn-success" id="save-symptom" style="margin-top:8px;">✅ Сохранить</button>
                     </div>
                     <!-- Выделения -->
                     <div style="margin-top:12px;">
@@ -611,7 +651,7 @@
                                 <span class="chip" data-spotting="со сгустками">🔴 со сгустками</span>
                                 <span class="chip" data-spotting="водянистые">💧💧 водянистые</span>
                             </div>
-                            <button class="btn btn-sm btn-primary" id="save-spotting" style="margin-top:8px;">✅ Сохранить</button>
+                            <button class="btn btn-sm btn-success" id="save-spotting" style="margin-top:8px;">✅ Сохранить</button>
                         </div>
                     </div>
                     <div id="today-events" style="margin-top:8px; font-size:14px; color:var(--text-secondary);"></div>
@@ -625,7 +665,6 @@
                         <button class="btn btn-sm btn-outline" id="quick-pain">💢 Боль</button>
                         <button class="btn btn-sm btn-outline" id="quick-note">📝 Заметка</button>
                     </div>
-                    <div id="quick-extra" style="margin-top:8px;"></div>
                 </div>
             </div>
 
@@ -645,7 +684,7 @@
                             <span class="chip" data-med="эскенза 2 пшика">Эскенза 2 пшика</span>
                             <span class="chip" data-med="другое">Другое</span>
                         </div>
-                        <button class="btn btn-sm btn-primary" id="save-migraine" style="margin-top:8px;">💾 Сохранить</button>
+                        <button class="btn btn-sm btn-success" id="save-migraine" style="margin-top:8px;">💾 Сохранить</button>
                     </div>
                     <div id="migraine-today-info" style="margin-top:8px; font-size:14px; color:var(--text-secondary);"></div>
                 </div>
@@ -670,9 +709,7 @@
                         <p>Последние месячные: <span id="last-period">—</span></p>
                         <p>Количество ПА: <span id="intercourse-count">0</span></p>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="cycleChart" width="300" height="150"></canvas>
-                    </div>
+                    <div class="chart-container"><canvas id="cycleChart" width="300" height="150"></canvas></div>
                 </div>
                 <div class="card">
                     <div class="card-title">🧠 Статистика мигреней</div>
@@ -680,9 +717,7 @@
                         <p>Всего дней с мигренью: <span id="migraine-count">0</span></p>
                         <p>Часто используемое средство: <span id="top-med">—</span></p>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="migraineChart" width="300" height="150"></canvas>
-                    </div>
+                    <div class="chart-container"><canvas id="migraineChart" width="300" height="150"></canvas></div>
                 </div>
                 <div class="card">
                     <div class="card-title">📈 Симптомы</div>
@@ -766,6 +801,38 @@
         return ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'][month];
     }
 
+    // ===== Toast =====
+    function showToast(message, duration = 2500) {
+        const toast = document.getElementById('toast-container');
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toast._hideTimeout);
+        toast._hideTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
+    }
+
+    // ===== Модальное окно (универсальное) =====
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalTitle = document.getElementById('modal-title');
+    const modalContent = document.getElementById('modal-content');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+
+    function showModal(title, contentHTML) {
+        modalTitle.textContent = title;
+        modalContent.innerHTML = contentHTML;
+        modalOverlay.classList.add('active');
+    }
+
+    function closeModal() {
+        modalOverlay.classList.remove('active');
+    }
+
+    modalCloseBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) closeModal();
+    });
+
     // ===== Состояние =====
     let currentUser = null;
     let isAdmin = false;
@@ -797,9 +864,18 @@
     }
 
     async function saveUserData(email) {
-        if (!email) return;
-        const ref = getUserDocRef(email);
-        await setDoc(ref, userData, { merge: true });
+        if (!email) {
+            console.error('saveUserData: email is empty');
+            return;
+        }
+        try {
+            const ref = getUserDocRef(email);
+            await setDoc(ref, userData, { merge: true });
+            showToast('✅ Данные сохранены!');
+        } catch (err) {
+            console.error('Ошибка сохранения:', err);
+            showToast('❌ Ошибка сохранения: ' + err.message);
+        }
     }
 
     function subscribeUserData(email) {
@@ -918,7 +994,7 @@
         return { phase, day: diffDays };
     }
 
-    // ===== БАЗА СОВЕТОВ (сокращённо, но много) =====
+    // ===== БАЗА СОВЕТОВ ===== (сокращённо, но много вариантов)
     const TIPS_DB = {
         menstrual: {
             plans: ['Отдыхай, пей тёплую воду.', 'Лёгкая йога поможет.', 'Послушай тело, поспи.', 'Дыхательная гимнастика.', 'Тёплая ванна с солью.'],
@@ -981,7 +1057,7 @@
         renderTips();
     }
 
-    // --- Фаза и день ---
+    // --- Фаза ---
     function renderPhaseBadge() {
         const info = getCycleInfo(userData.cycles);
         const phaseNames = {
@@ -1036,7 +1112,6 @@
             if (hasOther) classes += ' other';
             if (hasMigraine) classes += ' migraine';
 
-            // Проверяем, есть ли запись о завершении менструации (отдельный тип 'period_end')
             const hasPeriodEnd = events.some(e => e.type === 'period_end');
             if (hasPeriodEnd) classes += ' period-end';
 
@@ -1065,6 +1140,7 @@
                 if (e.type === 'spotting') return `🩸 ${e.details}`;
                 if (e.type === 'mood') return `😊 ${e.details}`;
                 if (e.type === 'pain') return `💢 ${e.details}`;
+                if (e.type === 'note') return `📝 ${e.details}`;
                 return e.type;
             }).join(', ');
         }
@@ -1132,16 +1208,12 @@
         }
         if (periodEntries.length > 0) {
             lastPeriod = periodEntries[periodEntries.length-1].date;
-            // средняя длительность менструации (период от начала до окончания)
-            // если есть period_end, считаем разницу
             const lastStart = parseDate(lastPeriod);
             const endEntry = cycles.find(e => e.type === 'period_end' && parseDate(e.date) >= lastStart);
             if (endEntry) {
                 const endDate = parseDate(endEntry.date);
                 avgDuration = Math.round((endDate - lastStart) / (1000*60*60*24)) + 1;
             } else {
-                // если нет завершения, смотрим последний день с period
-                const lastPeriodDay = periodEntries[periodEntries.length-1];
                 avgDuration = '?';
             }
         }
@@ -1150,7 +1222,6 @@
         document.getElementById('last-period').textContent = lastPeriod;
         document.getElementById('intercourse-count').textContent = cycles.filter(e => e.type === 'intercourse').length;
 
-        // Мигрени
         const migraines = userData.migraines.filter(m => m.had === true);
         document.getElementById('migraine-count').textContent = migraines.length;
         const medCount = {};
@@ -1161,11 +1232,8 @@
         }
         document.getElementById('top-med').textContent = topMed;
 
-        // График цикла (последние 6 менструаций)
         drawCycleChart(periodEntries);
-        // График мигреней (последние 6 месяцев)
         drawMigraineChart(migraines);
-        // Симптомы
         renderSymptomStats();
     }
 
@@ -1185,16 +1253,14 @@
             return;
         }
 
-        // Возьмём последние 6 циклов
         const last6 = periodEntries.slice(-6);
-        const labels = last6.map(d => d.date.slice(5)); // MM-DD
+        const labels = last6.map(d => d.date.slice(5));
         const values = [];
         for (let i=1; i<last6.length; i++) {
             const prev = parseDate(last6[i-1].date);
             const curr = parseDate(last6[i].date);
             values.push(Math.round((curr - prev) / (1000*60*60*24)));
         }
-
         if (values.length === 0) {
             ctx.fillStyle = '#aaa';
             ctx.font = '14px sans-serif';
@@ -1210,8 +1276,6 @@
         const barWidth = Math.min(chartWidth / values.length * 0.7, 40);
 
         ctx.clearRect(0, 0, width, height);
-
-        // Оси
         ctx.strokeStyle = 'var(--text-secondary)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -1220,22 +1284,18 @@
         ctx.lineTo(width - padding.right, height - padding.bottom);
         ctx.stroke();
 
-        // Столбцы
         values.forEach((val, idx) => {
             const x = padding.left + (idx / values.length) * chartWidth + (chartWidth / values.length - barWidth)/2;
             const barHeight = (val / maxVal) * chartHeight;
             const y = height - padding.bottom - barHeight;
             ctx.fillStyle = 'var(--primary)';
             ctx.fillRect(x, y, barWidth, barHeight);
-            // Подписи
             ctx.fillStyle = 'var(--text-color)';
             ctx.font = '10px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(val + 'д', x + barWidth/2, height - padding.bottom + 15);
             ctx.fillText(labels[idx+1], x + barWidth/2, height - padding.bottom + 28);
         });
-
-        // Заголовок
         ctx.fillStyle = 'var(--text-color)';
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
@@ -1258,10 +1318,9 @@
             return;
         }
 
-        // Группировка по месяцам
         const monthCount = {};
         migraines.forEach(m => {
-            const month = m.date.slice(0,7); // YYYY-MM
+            const month = m.date.slice(0,7);
             monthCount[month] = (monthCount[month]||0) + 1;
         });
         const months = Object.keys(monthCount).sort().slice(-6);
@@ -1343,34 +1402,35 @@
 
     // ===== ОБРАБОТЧИКИ КНОПОК =====
 
-    // Месячные
+    // --- Месячные (сохраняем сразу) ---
     document.getElementById('btn-period').addEventListener('click', async () => {
-        if (!currentUser || !currentDocId) return;
+        if (!currentUser || !currentDocId) {
+            showToast('❌ Пользователь не авторизован');
+            return;
+        }
         const dateStr = todayStr();
-        // Проверяем, нет ли уже записи о месячных сегодня
         const exists = userData.cycles.some(e => e.date === dateStr && e.type === 'period');
         if (!exists) {
             userData.cycles.push({ date: dateStr, type: 'period' });
             await saveUserData(currentDocId);
             renderAll();
         } else {
-            alert('Месячные уже записаны на сегодня.');
+            showToast('ℹ️ Месячные уже записаны на сегодня');
         }
     });
 
-    // Завершить месячные
+    // --- Завершить месячные ---
     document.getElementById('btn-end-period').addEventListener('click', async () => {
         if (!currentUser || !currentDocId) return;
         const dateStr = todayStr();
-        // Проверяем, есть ли активные месячные (period) и нет ли уже завершения
         const hasPeriod = userData.cycles.some(e => e.date === dateStr && e.type === 'period');
         const hasEnd = userData.cycles.some(e => e.date === dateStr && e.type === 'period_end');
         if (!hasPeriod) {
-            alert('Сначала отметь начало месячных (кнопка "🩸 Месячные")');
+            showToast('❌ Сначала отметь начало месячных (🩸 Месячные)');
             return;
         }
         if (hasEnd) {
-            alert('Завершение уже записано на сегодня.');
+            showToast('ℹ️ Завершение уже записано на сегодня');
             return;
         }
         userData.cycles.push({ date: dateStr, type: 'period_end' });
@@ -1378,7 +1438,7 @@
         renderAll();
     });
 
-    // ПА
+    // --- ПА ---
     document.getElementById('btn-intercourse').addEventListener('click', async () => {
         if (!currentUser || !currentDocId) return;
         userData.cycles.push({ date: todayStr(), type: 'intercourse' });
@@ -1386,19 +1446,24 @@
         renderAll();
     });
 
-    // Симптомы
+    // --- Симптомы (открыть контейнер) ---
     document.getElementById('btn-symptom').addEventListener('click', () => {
         const container = document.getElementById('symptom-container');
         container.style.display = container.style.display === 'none' ? 'block' : 'none';
         document.querySelectorAll('#symptom-chips .chip').forEach(c => c.classList.remove('selected'));
     });
+
     document.querySelectorAll('#symptom-chips .chip').forEach(chip => {
         chip.addEventListener('click', () => chip.classList.toggle('selected'));
     });
+
     document.getElementById('save-symptom').addEventListener('click', async () => {
         if (!currentUser || !currentDocId) return;
         const selected = document.querySelectorAll('#symptom-chips .chip.selected');
-        if (selected.length === 0) return;
+        if (selected.length === 0) {
+            showToast('⚠️ Выберите хотя бы один симптом');
+            return;
+        }
         const symptoms = Array.from(selected).map(c => c.dataset.symptom);
         const dateStr = todayStr();
         for (let sym of symptoms) {
@@ -1409,19 +1474,24 @@
         document.getElementById('symptom-container').style.display = 'none';
     });
 
-    // Выделения
+    // --- Выделения ---
     document.getElementById('btn-spotting').addEventListener('click', () => {
         const container = document.getElementById('spotting-container');
         container.style.display = container.style.display === 'none' ? 'block' : 'none';
         document.querySelectorAll('#spotting-chips .chip').forEach(c => c.classList.remove('selected'));
     });
+
     document.querySelectorAll('#spotting-chips .chip').forEach(chip => {
         chip.addEventListener('click', () => chip.classList.toggle('selected'));
     });
+
     document.getElementById('save-spotting').addEventListener('click', async () => {
         if (!currentUser || !currentDocId) return;
         const selected = document.querySelector('#spotting-chips .chip.selected');
-        if (!selected) return;
+        if (!selected) {
+            showToast('⚠️ Выберите тип выделений');
+            return;
+        }
         const details = selected.dataset.spotting;
         userData.cycles.push({ date: todayStr(), type: 'spotting', details: details });
         await saveUserData(currentDocId);
@@ -1429,7 +1499,7 @@
         document.getElementById('spotting-container').style.display = 'none';
     });
 
-    // Быстрые заметки
+    // --- Быстрые заметки ---
     document.getElementById('quick-mood').addEventListener('click', async () => {
         if (!currentUser || !currentDocId) return;
         const val = prompt('😊 Какое настроение? (например, "отличное", "грустное")');
@@ -1446,7 +1516,7 @@
         if (val) { userData.cycles.push({ date: todayStr(), type: 'note', details: val }); await saveUserData(currentDocId); renderAll(); }
     });
 
-    // Навигация календаря
+    // --- Навигация календаря ---
     document.getElementById('prev-month').addEventListener('click', () => {
         if (currentMonth === 0) { currentMonth = 11; currentYear--; } else currentMonth--;
         renderCalendar();
@@ -1456,57 +1526,51 @@
         renderCalendar();
     });
 
-    // Клик по дню – модалка
+    // --- Клик по дню – модалка с записями ---
     document.getElementById('calendar-grid').addEventListener('click', (e) => {
         const dayEl = e.target.closest('.day');
         if (!dayEl) return;
         const dateStr = dayEl.dataset.date;
         if (!dateStr) return;
-        showModalForDate(dateStr);
+        showDayEvents(dateStr);
     });
 
-    // Модалка
-    const modalOverlay = document.getElementById('modal-overlay');
-    const modalTitle = document.getElementById('modal-title');
-    const modalEventsList = document.getElementById('modal-events-list');
-    const modalCloseBtn = document.getElementById('modal-close-btn');
-
-    function showModalForDate(dateStr) {
+    function showDayEvents(dateStr) {
         const events = userData.cycles.filter(e => e.date === dateStr);
         const migraines = userData.migraines.filter(m => m.date === dateStr);
-        if (events.length === 0 && migraines.length === 0) {
-            alert('Нет записей на эту дату.');
-            return;
-        }
-        modalTitle.textContent = `📅 ${dateStr}`;
-        let html = '';
-        events.forEach((e, index) => {
-            let label = '';
-            if (e.type === 'period') label = '🩸 Месячные';
-            else if (e.type === 'period_end') label = '✅ Месячные завершены';
-            else if (e.type === 'intercourse') label = '💞 ПА';
-            else if (e.type === 'symptom') label = `😣 ${e.details}`;
-            else if (e.type === 'spotting') label = `🩸 ${e.details}`;
-            else if (e.type === 'mood') label = `😊 ${e.details}`;
-            else if (e.type === 'pain') label = `💢 ${e.details}`;
-            else if (e.type === 'note') label = `📝 ${e.details}`;
-            else label = e.type;
-            html += `<div class="event-item">
-                        <span>${label}</span>
-                        <button class="del-btn" data-index="${index}" data-type="cycle">Удалить</button>
-                     </div>`;
-        });
-        migraines.forEach((m, index) => {
-            const label = `🧠 Мигрень: ${m.had ? 'была' : 'не было'} ${m.med ? `(${m.med})` : ''}`;
-            html += `<div class="event-item">
-                        <span>${label}</span>
-                        <button class="del-btn" data-index="${index}" data-type="migraine">Удалить</button>
-                     </div>`;
-        });
-        modalEventsList.innerHTML = html;
-        modalOverlay.classList.add('active');
 
-        modalEventsList.querySelectorAll('.del-btn').forEach(btn => {
+        let html = '';
+        if (events.length === 0 && migraines.length === 0) {
+            html = `<div class="empty-message">📭 Нет записей на эту дату</div>`;
+        } else {
+            events.forEach((e, index) => {
+                let label = '';
+                if (e.type === 'period') label = '🩸 Месячные';
+                else if (e.type === 'period_end') label = '✅ Месячные завершены';
+                else if (e.type === 'intercourse') label = '💞 ПА';
+                else if (e.type === 'symptom') label = `😣 ${e.details}`;
+                else if (e.type === 'spotting') label = `🩸 ${e.details}`;
+                else if (e.type === 'mood') label = `😊 ${e.details}`;
+                else if (e.type === 'pain') label = `💢 ${e.details}`;
+                else if (e.type === 'note') label = `📝 ${e.details}`;
+                else label = e.type;
+                html += `<div class="event-item">
+                            <span>${label}</span>
+                            <button class="del-btn" data-index="${index}" data-type="cycle">Удалить</button>
+                         </div>`;
+            });
+            migraines.forEach((m, index) => {
+                const label = `🧠 Мигрень: ${m.had ? 'была' : 'не было'} ${m.med ? `(${m.med})` : ''}`;
+                html += `<div class="event-item">
+                            <span>${label}</span>
+                            <button class="del-btn" data-index="${index}" data-type="migraine">Удалить</button>
+                         </div>`;
+            });
+        }
+        showModal(`📅 ${dateStr}`, html);
+
+        // Обработчики удаления (если есть записи)
+        modalContent.querySelectorAll('.del-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const idx = parseInt(btn.dataset.index);
                 const type = btn.dataset.type;
@@ -1517,19 +1581,18 @@
                 }
                 await saveUserData(currentDocId);
                 renderAll();
-                showModalForDate(dateStr);
+                // обновить модалку
+                showDayEvents(dateStr);
             });
         });
     }
 
-    modalCloseBtn.addEventListener('click', () => modalOverlay.classList.remove('active'));
-    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) modalOverlay.classList.remove('active'); });
-
-    // Мигрень
+    // --- Мигрень ---
     document.getElementById('migraine-yes').addEventListener('click', () => {
         document.getElementById('migraine-meds').style.display = 'block';
         document.querySelectorAll('#med-chips .chip').forEach(c => c.classList.remove('selected'));
     });
+
     document.getElementById('migraine-no').addEventListener('click', async () => {
         if (!currentUser || !currentDocId) return;
         const dateStr = todayStr();
@@ -1539,9 +1602,11 @@
         renderAll();
         document.getElementById('migraine-meds').style.display = 'none';
     });
+
     document.querySelectorAll('#med-chips .chip').forEach(chip => {
         chip.addEventListener('click', () => chip.classList.toggle('selected'));
     });
+
     document.getElementById('save-migraine').addEventListener('click', async () => {
         if (!currentUser || !currentDocId) return;
         const dateStr = todayStr();
@@ -1572,10 +1637,10 @@
         let msg = `🧠 ${dateStr}\n`;
         if (entry) msg += entry.had ? 'Болела' : 'Не болела' + (entry.med ? `\nПринято: ${entry.med}` : '');
         else msg += 'Нет записи';
-        alert(msg);
+        showModal('🧠 Мигрень', `<div class="empty-message">${msg.replace(/\n/g, '<br>')}</div>`);
     });
 
-    // Переключение вкладок
+    // --- Переключение вкладок ---
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             tabBtns.forEach(b => b.classList.remove('active'));
