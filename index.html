@@ -15,7 +15,7 @@
         }
     </script>
     <style>
-        /* ===== ТЕМЫ (без изменений) ===== */
+        /* ===== ТЕМЫ ===== */
         :root {
             --bg-start: #f7f0fc;
             --bg-end: #e6d9f0;
@@ -766,7 +766,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ===== НОВЫЕ EMAIL (приводим к нижнему регистру для сравнения) =====
+    // ===== EMAIL ПОЛЬЗОВАТЕЛЕЙ =====
     const ADMIN_EMAIL = 'kostya@kostya.com';
     const GIRL_EMAIL = 'vika@vika.com';
 
@@ -802,7 +802,7 @@
     }
 
     // ===== Toast =====
-    function showToast(message, duration = 2500) {
+    function showToast(message, duration = 3000) {
         const toast = document.getElementById('toast-container');
         toast.textContent = message;
         toast.classList.add('show');
@@ -836,7 +836,7 @@
     // ===== Состояние =====
     let currentUser = null;
     let isAdmin = false;
-    let viewingProfile = 'me'; // 'me' или 'her'
+    let viewingProfile = 'me';
     let userData = { cycles: [], migraines: [] };
     let currentMonth = new Date().getMonth();
     let currentYear = new Date().getFullYear();
@@ -844,7 +844,7 @@
     let migraineYear = currentYear;
     let unsubscribe = null;
 
-    // ===== Функция для получения email текущего профиля =====
+    // ===== Получение email текущего профиля =====
     function getCurrentProfileEmail() {
         if (!currentUser) return null;
         if (isAdmin && viewingProfile === 'her') {
@@ -853,7 +853,7 @@
         return currentUser.email;
     }
 
-    // ===== Работа с Firestore =====
+    // ===== Firestore =====
     function getUserDocRef(email) {
         return doc(db, 'users', email);
     }
@@ -869,6 +869,7 @@
             if (snap.exists()) {
                 userData = snap.data();
             } else {
+                // Если документа нет, создаём с пустыми данными
                 userData = { cycles: [], migraines: [] };
                 await setDoc(ref, userData);
             }
@@ -877,13 +878,18 @@
             renderAll();
         } catch (err) {
             console.error('Ошибка загрузки данных:', err);
-            showToast('❌ Ошибка загрузки: ' + err.message);
+            let msg = err.message;
+            if (msg.includes('permission') || msg.includes('Missing')) {
+                msg = '❌ Нет прав доступа к данным. Проверьте правила Firestore.';
+            }
+            showToast(msg, 5000);
+            // Не выходим из приложения, данные остаются пустыми
+            renderAll(); // отобразим пустой календарь
         }
     }
 
     async function saveUserData(email) {
         if (!email) {
-            console.error('saveUserData: email is empty');
             showToast('❌ Ошибка: email не указан');
             return;
         }
@@ -893,7 +899,11 @@
             showToast('✅ Данные сохранены!');
         } catch (err) {
             console.error('Ошибка сохранения:', err);
-            showToast('❌ Ошибка сохранения: ' + err.message);
+            let msg = err.message;
+            if (msg.includes('permission')) {
+                msg = '❌ Нет прав на запись. Проверьте правила Firestore.';
+            }
+            showToast(msg, 5000);
         }
     }
 
@@ -909,7 +919,12 @@
             }
         }, (err) => {
             console.error('Ошибка подписки:', err);
-            showToast('❌ Ошибка обновления данных');
+            let msg = err.message;
+            if (msg.includes('permission')) {
+                msg = '⚠️ Нет прав на чтение в реальном времени. Проверьте правила.';
+            }
+            showToast(msg, 5000);
+            // Не отписываемся, пробуем дальше
         });
     }
 
@@ -937,13 +952,9 @@
             const email = user.email;
             console.log('🔑 Вошли с email:', email);
 
-            // Приводим к нижнему регистру для сравнения
             const normalizedEmail = email.toLowerCase();
-            const adminNormalized = ADMIN_EMAIL.toLowerCase();
-            const girlNormalized = GIRL_EMAIL.toLowerCase();
-
-            isAdmin = (normalizedEmail === adminNormalized);
-            const isGirl = (normalizedEmail === girlNormalized);
+            isAdmin = (normalizedEmail === ADMIN_EMAIL.toLowerCase());
+            const isGirl = (normalizedEmail === GIRL_EMAIL.toLowerCase());
 
             if (!isAdmin && !isGirl) {
                 loginError.textContent = 'Доступ запрещён. Ваш email: ' + email;
@@ -952,6 +963,7 @@
                 return;
             }
 
+            // Показываем интерфейс
             pageLogin.style.display = 'none';
             pageLogin.classList.remove('active');
             pageMain.style.display = 'block';
@@ -983,7 +995,7 @@
         }
     });
 
-    // Переключение профиля
+    // Переключение профиля (для админа)
     profileBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
             profileBtns.forEach(b => b.classList.remove('active'));
@@ -1097,7 +1109,6 @@
         renderTips();
     }
 
-    // --- Фаза ---
     function renderPhaseBadge() {
         const info = getCycleInfo(userData.cycles);
         const phaseNames = {
@@ -1112,7 +1123,6 @@
         window._currentPhase = info.phase;
     }
 
-    // --- Календарь цикла ---
     function renderCalendar() {
         const grid = document.getElementById('calendar-grid');
         const monthYear = document.getElementById('month-year');
@@ -1160,7 +1170,6 @@
         grid.innerHTML = html;
     }
 
-    // --- Сегодня ---
     function renderToday() {
         const todayDate = document.getElementById('today-date');
         const todayEventsDiv = document.getElementById('today-events');
@@ -1189,7 +1198,6 @@
         document.getElementById('spotting-container').style.display = 'none';
     }
 
-    // --- Календарь мигрени ---
     function renderMigraineCalendar() {
         const grid = document.getElementById('migraine-calendar-grid');
         const monthYear = document.getElementById('migraine-month-year');
@@ -1232,7 +1240,6 @@
         }
     }
 
-    // --- Статистика с графиками ---
     function renderStats() {
         const cycles = userData.cycles;
         const periodEntries = cycles.filter(e => e.type === 'period').sort((a,b) => a.date.localeCompare(b.date));
@@ -1423,7 +1430,6 @@
         container.innerHTML = html;
     }
 
-    // --- Советы ---
     function renderTips() {
         const phase = getCycleInfo(userData.cycles).phase;
         const day = getCycleInfo(userData.cycles).day;
@@ -1442,7 +1448,6 @@
 
     // ===== ОБРАБОТЧИКИ КНОПОК =====
 
-    // Вспомогательная функция для сохранения
     async function saveCurrentData() {
         const email = getCurrentProfileEmail();
         if (!email) {
@@ -1453,12 +1458,8 @@
         return true;
     }
 
-    // --- Месячные ---
     document.getElementById('btn-period').addEventListener('click', async () => {
-        if (!currentUser) {
-            showToast('❌ Пользователь не авторизован');
-            return;
-        }
+        if (!currentUser) { showToast('❌ Не авторизован'); return; }
         const dateStr = todayStr();
         const exists = userData.cycles.some(e => e.date === dateStr && e.type === 'period');
         if (!exists) {
@@ -1466,22 +1467,21 @@
             await saveCurrentData();
             renderAll();
         } else {
-            showToast('ℹ️ Месячные уже записаны на сегодня');
+            showToast('ℹ️ Уже записано');
         }
     });
 
-    // --- Завершить месячные ---
     document.getElementById('btn-end-period').addEventListener('click', async () => {
         if (!currentUser) return;
         const dateStr = todayStr();
         const hasPeriod = userData.cycles.some(e => e.date === dateStr && e.type === 'period');
         const hasEnd = userData.cycles.some(e => e.date === dateStr && e.type === 'period_end');
         if (!hasPeriod) {
-            showToast('❌ Сначала отметь начало месячных (🩸 Месячные)');
+            showToast('❌ Сначала отметь начало месячных');
             return;
         }
         if (hasEnd) {
-            showToast('ℹ️ Завершение уже записано на сегодня');
+            showToast('ℹ️ Уже завершено');
             return;
         }
         userData.cycles.push({ date: dateStr, type: 'period_end' });
@@ -1489,7 +1489,6 @@
         renderAll();
     });
 
-    // --- ПА ---
     document.getElementById('btn-intercourse').addEventListener('click', async () => {
         if (!currentUser) return;
         userData.cycles.push({ date: todayStr(), type: 'intercourse' });
@@ -1497,7 +1496,6 @@
         renderAll();
     });
 
-    // --- Симптомы ---
     document.getElementById('btn-symptom').addEventListener('click', () => {
         const container = document.getElementById('symptom-container');
         container.style.display = container.style.display === 'none' ? 'block' : 'none';
@@ -1512,7 +1510,7 @@
         if (!currentUser) return;
         const selected = document.querySelectorAll('#symptom-chips .chip.selected');
         if (selected.length === 0) {
-            showToast('⚠️ Выберите хотя бы один симптом');
+            showToast('⚠️ Выберите симптом');
             return;
         }
         const symptoms = Array.from(selected).map(c => c.dataset.symptom);
@@ -1525,7 +1523,6 @@
         document.getElementById('symptom-container').style.display = 'none';
     });
 
-    // --- Выделения ---
     document.getElementById('btn-spotting').addEventListener('click', () => {
         const container = document.getElementById('spotting-container');
         container.style.display = container.style.display === 'none' ? 'block' : 'none';
@@ -1550,24 +1547,22 @@
         document.getElementById('spotting-container').style.display = 'none';
     });
 
-    // --- Быстрые заметки ---
     document.getElementById('quick-mood').addEventListener('click', async () => {
         if (!currentUser) return;
-        const val = prompt('😊 Какое настроение? (например, "отличное", "грустное")');
+        const val = prompt('😊 Какое настроение?');
         if (val) { userData.cycles.push({ date: todayStr(), type: 'mood', details: val }); await saveCurrentData(); renderAll(); }
     });
     document.getElementById('quick-pain').addEventListener('click', async () => {
         if (!currentUser) return;
-        const val = prompt('💢 Опишите боль (локализация, интенсивность)');
+        const val = prompt('💢 Опишите боль');
         if (val) { userData.cycles.push({ date: todayStr(), type: 'pain', details: val }); await saveCurrentData(); renderAll(); }
     });
     document.getElementById('quick-note').addEventListener('click', async () => {
         if (!currentUser) return;
-        const val = prompt('📝 Ваша заметка');
+        const val = prompt('📝 Заметка');
         if (val) { userData.cycles.push({ date: todayStr(), type: 'note', details: val }); await saveCurrentData(); renderAll(); }
     });
 
-    // --- Навигация календаря ---
     document.getElementById('prev-month').addEventListener('click', () => {
         if (currentMonth === 0) { currentMonth = 11; currentYear--; } else currentMonth--;
         renderCalendar();
@@ -1577,7 +1572,6 @@
         renderCalendar();
     });
 
-    // --- Клик по дню – модалка с записями ---
     document.getElementById('calendar-grid').addEventListener('click', (e) => {
         const dayEl = e.target.closest('.day');
         if (!dayEl) return;
@@ -1589,7 +1583,6 @@
     function showDayEvents(dateStr) {
         const events = userData.cycles.filter(e => e.date === dateStr);
         const migraines = userData.migraines.filter(m => m.date === dateStr);
-
         let html = '';
         if (events.length === 0 && migraines.length === 0) {
             html = `<div class="empty-message">📭 Нет записей на эту дату</div>`;
@@ -1620,7 +1613,6 @@
         }
         showModal(`📅 ${dateStr}`, html);
 
-        // Обработчики удаления
         modalContent.querySelectorAll('.del-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const idx = parseInt(btn.dataset.index);
@@ -1669,7 +1661,6 @@
         document.getElementById('migraine-meds').style.display = 'none';
     });
 
-    // Навигация мигрень-календарь
     document.getElementById('migraine-prev-month').addEventListener('click', () => {
         if (migraineMonth === 0) { migraineMonth = 11; migraineYear--; } else migraineMonth--;
         renderMigraineCalendar();
